@@ -1,0 +1,44 @@
+name: Contracts CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "contracts/**"
+      - ".github/workflows/contracts-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "contracts/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  foundry:
+    name: Foundry build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Show Foundry version
+        run: forge --version
+
+      - name: Install contract dependencies
+        run: cd contracts && forge install
+
+      - name: Build contracts
+        run: cd contracts && forge build
+
+      - name: Run Foundry tests
+        run: cd contracts && forge test -vvv
+
+      - name: Run fuzz tests (CI profile)
+        run: cd contracts && FOUNDRY_PROFILE=ci forge test --fuzz-runs 1024 -vvv
+

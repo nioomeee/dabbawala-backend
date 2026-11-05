@@ -1,0 +1,41 @@
+{
+  "name": "@dabbawala/database",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PostgreSQL schema, migrations, and repositories using Drizzle ORM.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "db:migrate": "drizzle-kit migrate",
+    "db:generate": "drizzle-kit generate",
+    "db:seed": "tsx src/migrations/seed.ts",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@dabbawala/config": "workspace:*",
+    "@dabbawala/shared": "workspace:*",
+    "drizzle-orm": "^0.44.2",
+    "pg": "^8.16.0",
+    "zod": "^3.25.64"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.15",
+    "drizzle-kit": "^0.31.1",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}
+
