@@ -53,9 +53,15 @@ importers:
       '@dabbawala/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@dabbawala/policy-engine':
+        specifier: workspace:*
+        version: link:../../packages/policy-engine
       '@dabbawala/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@dabbawala/zero-g-adapter':
+        specifier: workspace:*
+        version: link:../../packages/zero-g-adapter
       '@fastify/cors':
         specifier: ^10.0.2
         version: 10.1.0
@@ -270,6 +276,43 @@ importers:
         specifier: ^3.25.64
         version: 3.25.76
     devDependencies:
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+      vitest:
+        specifier: 2.1.9
+        version: 2.1.9(@types/node@22.15.29)
+
+  packages/zero-g-adapter:
+    dependencies:
+      '@0gfoundation/0g-storage-ts-sdk':
+        specifier: 1.2.13
+        version: 1.2.13(bufferutil@4.1.0)(ethers@6.13.1(bufferutil@4.1.0)(utf-8-validate@5.0.10))(utf-8-validate@5.0.10)
+      '@dabbawala/application':
+        specifier: workspace:*
+        version: link:../application
+      '@dabbawala/shared':
+        specifier: workspace:*
+        version: link:../shared
+      ethers:
+        specifier: 6.13.1
+        version: 6.13.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      zod:
+        specifier: ^3.25.64
+        version: 3.25.76
+    devDependencies:
+      '@dabbawala/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@dabbawala/policy-engine':
+        specifier: workspace:*
+        version: link:../policy-engine
+      '@types/node':
+        specifier: ^22.15.29
+        version: 22.15.29
       rimraf:
         specifier: ^6.0.1
         version: 6.0.1

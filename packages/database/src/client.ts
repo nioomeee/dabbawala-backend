@@ -1,5 +1,4 @@
 /**
-<<<<<<< HEAD
  * Database client - PostgreSQL connection via Drizzle ORM
  *
  * Uses the `pg` driver with NeonDB cloud PostgreSQL.
@@ -34,24 +33,6 @@ export function initDatabase(databaseUrl: string): Database {
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
   });
-=======
- * Database client — PostgreSQL connection via Drizzle ORM
- * ref: AGENTS.md §8 (configuration strictly via env vars)
- */
-
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
-import * as schema from "./schema/index.js";
-
-let _db: ReturnType<typeof drizzle<typeof schema>> | undefined;
-let _pool: Pool | undefined;
-
-export type Database = ReturnType<typeof drizzle<typeof schema>>;
-
-/** Initialize the database connection. Call once at application startup. */
-export function initDatabase(databaseUrl: string): Database {
-  _pool = new Pool({ connectionString: databaseUrl });
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
   _db = drizzle(_pool, { schema });
   return _db;
 }
@@ -70,7 +51,3 @@ export async function closeDatabase(): Promise<void> {
   _db = undefined;
   _pool = undefined;
 }
-<<<<<<< HEAD
-=======
-
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf

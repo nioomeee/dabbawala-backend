@@ -1,16 +1,8 @@
 {
-<<<<<<< HEAD
   "compilerOptions": {
     "target": "ES2022",
     "module": "node16",
     "moduleResolution": "node16",
-=======
-  "$schema": "https://json.schemastore.org/tsconfig",
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "Node16",
-    "moduleResolution": "Node16",
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
     "lib": ["ES2022"],
     "strict": true,
     "noImplicitAny": true,
@@ -18,10 +10,6 @@
     "noImplicitOverride": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-<<<<<<< HEAD
-=======
-    "exactOptionalPropertyTypes": true,
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
@@ -35,7 +23,3 @@
     "incremental": true
   }
 }
-<<<<<<< HEAD
-=======
-
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf

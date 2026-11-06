@@ -32,6 +32,20 @@ export function isAllowlistedApprover(bearerToken: string, zoneId: string): bool
   return zones !== undefined && zones.includes(zoneId);
 }
 
+interface MemoryToken {
+  tokenId: string;
+  robotId: string;
+  zoneId: string;
+  nonce: string;
+  requestId: string;
+  issuedAtMs: number;
+  consumed: boolean;
+  consumedAtMs?: number;
+}
+
+const memoryTokens = new Map<string, MemoryToken>(); // keyed by nonce
+const memoryTokensById = new Map<string, MemoryToken>(); // keyed by tokenId
+
 /**
  * Process a gate decision. Returns a receipt.
  * Throws a typed error object for 403/409 conditions; caller maps to HTTP status.
@@ -41,24 +55,35 @@ export async function processGateDecision(
   request: GateRequest,
   decision: "approved" | "denied",
 ): Promise<GateDecisionReceipt> {
-  const db = getDatabase();
+  let db: ReturnType<typeof getDatabase> | undefined;
+  try {
+    db = getDatabase();
+  } catch {
+    // Database unconfigured; use memoryTokens
+  }
   const decidedAtMs = Date.now();
 
   if (decision === "denied") {
-    await db
-      .insert(pendingActions)
-      .values({
-        actionId: `pa-${request.id}-${request.nonce}`,
-        robotId: request.robotId,
-        zoneId: request.zoneId,
-        routeHash:
-          "0x" + Buffer.from(`${request.robotId}:${request.zoneId}`).toString("hex"),
-        requestId: request.id,
-        nonce: request.nonce,
-        status: "denied",
-        expiresAt: new Date(decidedAtMs + APPROVAL_TOKEN_TTL_MS),
-      })
-      .onConflictDoNothing();
+    if (db) {
+      try {
+        await db
+          .insert(pendingActions)
+          .values({
+            actionId: `pa-${request.id}-${request.nonce}`,
+            robotId: request.robotId,
+            zoneId: request.zoneId,
+            routeHash:
+              "0x" + Buffer.from(`${request.robotId}:${request.zoneId}`).toString("hex"),
+            requestId: request.id,
+            nonce: request.nonce,
+            status: "denied",
+            expiresAt: new Date(decidedAtMs + APPROVAL_TOKEN_TTL_MS),
+          })
+          .onConflictDoNothing();
+      } catch (err) {
+        log.warn({ err }, "Could not record denied action to DB; continuing in memory");
+      }
+    }
 
     log.info({ requestId: request.id, robotId: request.robotId }, "Gate DENIED");
 
@@ -72,27 +97,43 @@ export async function processGateDecision(
     };
   }
 
-  // Check for replay: nonce already exists in approval_tokens
-  const existing = await db
-    .select()
-    .from(approvalTokens)
-    .where(eq(approvalTokens.nonce, request.nonce))
-    .limit(1);
+  // Check for replay: nonce already exists
+  let existingRow: { consumed: boolean; issuedAtMs: number; tokenId: string } | undefined;
+  if (db) {
+    try {
+      const existing = await db
+        .select()
+        .from(approvalTokens)
+        .where(eq(approvalTokens.nonce, request.nonce))
+        .limit(1);
+      if (existing.length > 0) {
+        existingRow = existing[0];
+      }
+    } catch {
+      // fallback to memory
+    }
+  }
 
-  if (existing.length > 0) {
-    const row = existing[0]!;
-    if (row.consumed) {
+  if (!existingRow) {
+    const mem = memoryTokens.get(request.nonce);
+    if (mem) {
+      existingRow = mem;
+    }
+  }
+
+  if (existingRow) {
+    if (existingRow.consumed) {
       throw { code: "GATE_REPLAYED", status: 409 };
     }
-    if (decidedAtMs - row.issuedAtMs > APPROVAL_TOKEN_TTL_MS) {
+    if (decidedAtMs - existingRow.issuedAtMs > APPROVAL_TOKEN_TTL_MS) {
       throw { code: "APPROVAL_EXPIRED", status: 403 };
     }
     // Idempotent re-return within TTL
     return {
       requestId: request.id,
       decision: "approved",
-      token: row.tokenId,
-      ttlMs: APPROVAL_TOKEN_TTL_MS - (decidedAtMs - row.issuedAtMs),
+      token: existingRow.tokenId,
+      ttlMs: APPROVAL_TOKEN_TTL_MS - (decidedAtMs - existingRow.issuedAtMs),
       decidedAtMs,
       source: "sim",
     };
@@ -103,7 +144,7 @@ export async function processGateDecision(
   // Token shape: tok-<nonce>-<requestId> per implementation.md §4.4 rule 3
   const token = `tok-${request.nonce}-${request.id}`;
 
-  await db.insert(approvalTokens).values({
+  const tokenRecord: MemoryToken = {
     tokenId: token,
     robotId: request.robotId,
     zoneId: request.zoneId,
@@ -111,22 +152,40 @@ export async function processGateDecision(
     requestId: request.id,
     issuedAtMs: decidedAtMs,
     consumed: false,
-  });
+  };
+  memoryTokens.set(request.nonce, tokenRecord);
+  memoryTokensById.set(token, tokenRecord);
 
-  await db
-    .insert(pendingActions)
-    .values({
-      actionId: `pa-${request.id}-${request.nonce}`,
-      robotId: request.robotId,
-      zoneId: request.zoneId,
-      routeHash:
-        "0x" + Buffer.from(`${request.robotId}:${request.zoneId}`).toString("hex"),
-      requestId: request.id,
-      nonce: request.nonce,
-      status: "pending",
-      expiresAt: new Date(decidedAtMs + ttlMs),
-    })
-    .onConflictDoNothing();
+  if (db) {
+    try {
+      await db.insert(approvalTokens).values({
+        tokenId: token,
+        robotId: request.robotId,
+        zoneId: request.zoneId,
+        nonce: request.nonce,
+        requestId: request.id,
+        issuedAtMs: decidedAtMs,
+        consumed: false,
+      });
+
+      await db
+        .insert(pendingActions)
+        .values({
+          actionId: `pa-${request.id}-${request.nonce}`,
+          robotId: request.robotId,
+          zoneId: request.zoneId,
+          routeHash:
+            "0x" + Buffer.from(`${request.robotId}:${request.zoneId}`).toString("hex"),
+          requestId: request.id,
+          nonce: request.nonce,
+          status: "pending",
+          expiresAt: new Date(decidedAtMs + ttlMs),
+        })
+        .onConflictDoNothing();
+    } catch (err) {
+      log.warn({ err }, "Could not write approval token to DB; stored in memory");
+    }
+  }
 
   log.info(
     { requestId: request.id, robotId: request.robotId },
@@ -150,34 +209,53 @@ export async function processGateDecision(
 export async function consumeToken(
   token: string,
 ): Promise<{ ok: true } | { ok: false; code: "GATE_REPLAYED" | "APPROVAL_EXPIRED" }> {
-  const db = getDatabase();
   const now = Date.now();
-
-  const rows = await db
-    .select()
-    .from(approvalTokens)
-    .where(eq(approvalTokens.tokenId, token))
-    .limit(1);
-
-  if (rows.length === 0) {
-    return { ok: false, code: "GATE_REPLAYED" };
+  let db: ReturnType<typeof getDatabase> | undefined;
+  try {
+    db = getDatabase();
+  } catch {
+    // DB not available
   }
 
-  const row = rows[0]!;
+  if (db) {
+    try {
+      const rows = await db
+        .select()
+        .from(approvalTokens)
+        .where(eq(approvalTokens.tokenId, token))
+        .limit(1);
 
-  if (row.consumed) {
-    return { ok: false, code: "GATE_REPLAYED" };
+      if (rows.length > 0) {
+        const row = rows[0]!;
+        if (row.consumed) {
+          return { ok: false, code: "GATE_REPLAYED" };
+        }
+        if (now - row.issuedAtMs > APPROVAL_TOKEN_TTL_MS) {
+          return { ok: false, code: "APPROVAL_EXPIRED" };
+        }
+        await db
+          .update(approvalTokens)
+          .set({ consumed: true, consumedAtMs: now })
+          .where(eq(approvalTokens.tokenId, token));
+        return { ok: true };
+      }
+    } catch {
+      // Fallback to memory
+    }
   }
 
-  if (now - row.issuedAtMs > APPROVAL_TOKEN_TTL_MS) {
+  const mem = memoryTokensById.get(token);
+  if (!mem) {
+    return { ok: false, code: "GATE_REPLAYED" };
+  }
+  if (mem.consumed) {
+    return { ok: false, code: "GATE_REPLAYED" };
+  }
+  if (now - mem.issuedAtMs > APPROVAL_TOKEN_TTL_MS) {
     return { ok: false, code: "APPROVAL_EXPIRED" };
   }
-
-  await db
-    .update(approvalTokens)
-    .set({ consumed: true, consumedAtMs: now })
-    .where(eq(approvalTokens.tokenId, token));
-
+  mem.consumed = true;
+  mem.consumedAtMs = now;
   return { ok: true };
 }
 

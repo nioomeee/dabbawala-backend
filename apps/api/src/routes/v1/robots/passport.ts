@@ -28,7 +28,7 @@ export const passportRoutes: FastifyPluginAsync = async (app) => {
           required: ["id"],
         },
         response: {
-          200: { type: "object" },
+          200: { type: "object", additionalProperties: true },
           400: {
             type: "object",
             properties: { error: { type: "string" } },

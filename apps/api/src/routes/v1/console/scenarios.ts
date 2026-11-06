@@ -17,8 +17,22 @@ import { createLogger } from "@dabbawala/observability";
 const log = createLogger("api:scenarios");
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-// From src/routes/v1/console/ → up 4 levels to src/ → fixtures/
-const FIXTURE_PATH = join(__dirname, "../../../../fixtures/scenarios.json");
+
+function getFixturePath(): string {
+  const candidates = [
+    join(__dirname, "../../../fixtures/scenarios.json"),
+    join(__dirname, "../../../../src/fixtures/scenarios.json"),
+    join(__dirname, "../fixtures/scenarios.json"),
+    join(process.cwd(), "src/fixtures/scenarios.json"),
+    join(process.cwd(), "apps/api/src/fixtures/scenarios.json"),
+  ];
+  for (const c of candidates) {
+    if (existsSync(c)) return c;
+  }
+  return candidates[0]!;
+}
+
+const FIXTURE_PATH = getFixturePath();
 
 let _cache: ScenarioTestCase[] | undefined;
 
@@ -57,7 +71,7 @@ export const scenarioRoutes: FastifyPluginAsync = async (app) => {
         tags: ["console"],
         summary: "List all scenario test cases",
         response: {
-          200: { type: "array", items: { type: "object" } },
+          200: { type: "array", items: { type: "object", additionalProperties: true } },
           503: {
             type: "object",
             properties: { error: { type: "string" } },

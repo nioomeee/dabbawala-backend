@@ -18,22 +18,9 @@
     "test": "vitest run",
     "clean": "rimraf dist tsconfig.tsbuildinfo"
   },
-<<<<<<< HEAD
   "dependencies": {},
   "devDependencies": {
     "@types/node": "^22.15.29",
     "zod": "^3.25.64"
   }
 }
-=======
-  "dependencies": {
-    "zod": "^3.25.64"
-  },
-  "devDependencies": {
-    "rimraf": "^6.0.1",
-    "typescript": "^5.8.3",
-    "vitest": "^3.2.4"
-  }
-}
-
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf

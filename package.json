@@ -31,10 +31,7 @@
     "ci:all": "pnpm lint && pnpm typecheck && pnpm test:all && pnpm forge:test"
   },
   "devDependencies": {
-<<<<<<< HEAD
     "@eslint/js": "9.27.0",
-=======
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
     "@typescript-eslint/eslint-plugin": "8.6.0",
     "@typescript-eslint/parser": "8.6.0",
     "eslint": "9.27.0",
