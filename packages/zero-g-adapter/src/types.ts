@@ -73,6 +73,8 @@ export type ProvenanceFinal =
       readonly outcome: "HALT";
       readonly reason: HaltReason;
       readonly failure: FailureKind;
+      /** Stable `OG_*` operator diagnosis (never model text). */
+      readonly failureCode?: string;
       /** Request id of the last attempt that returned one, for audit. */
       readonly requestId: string | null;
     };

@@ -29,7 +29,7 @@ import {
 } from "@dabbawala/shared";
 import type { IFleetBrain } from "@dabbawala/application";
 import type { ComputeSettings } from "./config.js";
-import { classifyHttpStatus, haltReasonFor, httpDetail, isRetryable } from "./failures.js";
+import { classifyHttpStatus, haltReasonFor, httpDetail, isRetryable, operationalCode } from "./failures.js";
 import { buildPrompt } from "./prompt.js";
 import { parseProposal } from "./proposal.js";
 import {
@@ -509,6 +509,7 @@ export class ZeroGFleetBrain implements IFleetBrain {
   ): ZeroGDecision {
     const finishedAtMs = this.#clock.nowMs();
     const reason = haltReasonFor(failure);
+    const failureCode = operationalCode(failure, detail);
     const halt: Halt = { halted: true, reason, detail };
     const provenance: ProvenanceRecord = {
       ...base,
@@ -516,7 +517,7 @@ export class ZeroGFleetBrain implements IFleetBrain {
       requestSha256,
       responseContentSha256: contentSha256,
       attempts,
-      final: { outcome: "HALT", reason, failure, requestId },
+      final: { outcome: "HALT", reason, failure, failureCode, requestId },
     };
     this.#haltCount += 1;
     this.#lastHaltAtMs = finishedAtMs;

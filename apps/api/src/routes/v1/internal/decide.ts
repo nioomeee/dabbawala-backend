@@ -76,8 +76,11 @@ export const internalDecideRoutes: FastifyPluginAsync = async (app) => {
         const source: "sim" | "live" = provenance.mode === "MOCK" ? "sim" : "live";
 
         if ("halted" in result) {
+          const final = provenance.final;
+          const failureCode =
+            final !== undefined && final.outcome === "HALT" ? final.failureCode : undefined;
           log.warn(
-            { robotId: state.robotId, reason: result.reason, detail: result.detail },
+            { robotId: state.robotId, reason: result.reason, detail: result.detail, errorCode: failureCode },
             "internal decide — halted",
           );
           // A Halt is a normal, safe outcome: 200 carrying the domain result.
@@ -86,6 +89,7 @@ export const internalDecideRoutes: FastifyPluginAsync = async (app) => {
             halted: true,
             reason: result.reason,
             detail: result.detail,
+            ...(failureCode !== undefined ? { errorCode: failureCode } : {}),
             policyBlock: policy.block.toString(),
             policyHash: policy.valuesHash,
             provenance,

@@ -51,6 +51,7 @@ export const missionDecideRoutes: FastifyPluginAsync = async (app) => {
               halted: { type: "boolean" },
               reason: { type: "string" },
               detail: { type: "string" },
+              errorCode: { type: "string" },
               policyApproved: { type: "boolean" },
               policyHalt: {
                 type: "object",
@@ -64,7 +65,7 @@ export const missionDecideRoutes: FastifyPluginAsync = async (app) => {
               },
               policyBlock: { type: "string" },
               policyHash: { type: "string" },
-              provenance: { type: "object", additionalProperties: true },
+              provenance: { type: "object", nullable: true, additionalProperties: true },
             },
           },
           400: { type: "object", properties: { error: { type: "string" } } },
@@ -92,19 +93,33 @@ export const missionDecideRoutes: FastifyPluginAsync = async (app) => {
       }
 
       // 2. Budget exhaustion pre-check — fail before calling 0G (saves cost).
-      //    remainingBudgetAtomic "0" means the robot has no approved budget left.
-      const remainingBudget = BigInt(state.remainingBudgetAtomic ?? "0");
-      if (remainingBudget <= 0n) {
-        log.warn({ robotId: state.robotId }, "mission decide — budget exhausted");
+      //    The authoritative budget is the freshly-read ENS policy, NOT the
+      //    caller-supplied hint (which a buggy client can send as "0").
+      //    The hint is never trusted for authorisation.
+      let policyBudget: bigint;
+      try {
+        policyBudget = BigInt(policy.budgetAtomic);
+      } catch {
+        log.error({ robotId: state.robotId }, "mission decide — policy budget is not an integer");
+        return reply.status(503).send({ error: "ENS_UNREADABLE" });
+      }
+      if (policyBudget <= 0n) {
+        log.warn(
+          { robotId: state.robotId, policyBudget: policy.budgetAtomic },
+          "mission decide — budget exhausted",
+        );
         return reply.send({
           source: "live" as const,
-          action: { type: "continue" },
           requestId: randomUUID(),
+          halted: true,
+          reason: "BUDGET_EXHAUSTED",
+          detail: `Robot ${state.robotId} has no remaining policy budget (budgetAtomic=${policy.budgetAtomic})`,
+          errorCode: "OG_BUDGET_EXHAUSTED",
           policyApproved: false,
           policyHalt: {
             halted: true,
             reason: "BUDGET_EXHAUSTED",
-            detail: `Robot ${state.robotId} has no remaining budget (remainingBudgetAtomic=${state.remainingBudgetAtomic})`,
+            detail: `Robot ${state.robotId} has no remaining policy budget (budgetAtomic=${policy.budgetAtomic})`,
           },
           policyBlock: policy.block.toString(),
           policyHash: policy.valuesHash,
@@ -125,8 +140,11 @@ export const missionDecideRoutes: FastifyPluginAsync = async (app) => {
         const source: "sim" | "live" = provenance.mode === "MOCK" ? "sim" : "live";
 
         if ("halted" in result) {
+          const final = provenance.final;
+          const failureCode =
+            final !== undefined && final.outcome === "HALT" ? final.failureCode : undefined;
           log.warn(
-            { robotId: state.robotId, reason: result.reason, detail: result.detail },
+            { robotId: state.robotId, reason: result.reason, detail: result.detail, errorCode: failureCode },
             "mission decide — halted",
           );
           return reply.send({
@@ -134,6 +152,7 @@ export const missionDecideRoutes: FastifyPluginAsync = async (app) => {
             halted: true,
             reason: result.reason,
             detail: result.detail,
+            ...(failureCode !== undefined ? { errorCode: failureCode } : {}),
             policyBlock: policy.block.toString(),
             policyHash: policy.valuesHash,
             provenance,

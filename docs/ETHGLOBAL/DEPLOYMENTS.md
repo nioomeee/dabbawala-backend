@@ -11,7 +11,7 @@
 - **Build**: Production build from `pnpm build` in `dabbawala-frontend/`
 - **Commit SHA**: latest on `main` branch
 - **Environment**: `.env.production` (or Vercel dashboard vars)
-  - `NEXT_PUBLIC_API_URL=http://localhost:3001` (canonical)
+  - `NEXT_PUBLIC_API_URL=https://dabbawala-backend-service.onrender.com` (canonical)
   - `NEXT_PUBLIC_FRONTEND_URL=https://dabbawala-frontend-alpha.vercel.app`
 
 ### Backend
@@ -25,7 +25,7 @@
 - **Commit SHA**: latest on `main` branch
 - **Environment variables** (from `.env`, never committed):
   - `API_PORT=3001`
-  - `DATABASE_URL=postgresql://neondb_owner:npg_Ji1umpb8ASlh@ep-snowy-credit-a7353up7-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require`
+  - `DATABASE_URL=postgresql://<REDACTED>`
   - `NODE_ENV=production`
   - `SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com`
   - `SEPOLIA_CHAIN_ID=11155111`
@@ -34,17 +34,17 @@
   - `ENS_ROBOT_RAMU_RESOLVER=0xE65DC3a39fCC4f75940CaFf0D4B10D6441672e43`
   - `ENS_ROBOT_SAKHU_RESOLVER=0xE65DC3a39fCC4f75940CaFf0D4B10D6441672e43`
   - `ENS_ROBOT_JANU_RESOLVER=0xE65DC3a39fCC4f75940CaFf0D4B10D6441672e43`
-  - `OPERATOR_PRIVATE_KEY=8085daebbca1de2340bb355eebf75cec4c6f88d30bb8c0f1e5de79d73fa0f844`
-  - `SAFETY_OFFICER_PRIVATE_KEY=95de206b3e8b0019efb7d5265cbf972b759384567136ecb000ec78dad6746e44`
-  - `ROBOT_RAMU_PRIVATE_KEY=673c93298038ddc17234756e2fbf275ac3e38a41b2aed81e7b385175984ed71d`
-  - `ROBOT_SAKHU_PRIVATE_KEY=de589cbcd598561b6c7686b06f18e13fd3d83b35c02ec5084cffe3d24a402bf7`
-  - `ROBOT_JANU_PRIVATE_KEY=9162c45376bc90049866edda68a7e10a99c6fac31a1641239065fcdd62d68b0c`
+  - `OPERATOR_PRIVATE_KEY=<REDACTED>`
+  - `SAFETY_OFFICER_PRIVATE_KEY=<REDACTED>`
+  - `ROBOT_RAMU_PRIVATE_KEY=<REDACTED>`
+  - `ROBOT_SAKHU_PRIVATE_KEY=<REDACTED>`
+  - `ROBOT_JANU_PRIVATE_KEY=<REDACTED>`
   - `ZERO_G_ROUTER_BASE_URL=https://router-api.0g.ai/v1`
-  - `ZERO_G_ROUTER_API_KEY=sk-9ab48a55-1ad8-4f9d-ad1c-51bfab515bde`
+  - `ZERO_G_ROUTER_API_KEY=sk-<REDACTED>`
   - `ZERO_G_MODEL_ID=0gm-1.0-35b-a3b-sia`
   - `ZERO_G_DISABLE_THINKING=true`
   - `ZERO_G_INDEXER_URL=https://indexer-storage-testnet-turbo.0g.ai`
-  - `ZERO_RPC_URL=https://evmrpc-testnet.0g.ai`
+  - `ZERO_G_RPC_URL=https://evmrpc-testnet.0g.ai`
   - `ZERO_G_CHAIN_ID=16602`
   - `X402_OFFICIAL_FACILITATOR_URL=https://x402.org/facilitator`
   - `X402_BLOCKY402_FACILITATOR_URL=https://api.testnet.blocky402.com`
@@ -55,15 +55,16 @@
   - `SPEND_CONTROLLER_POLICY_CACHE_TTL_MS=12000`
   - `HEDERA_NETWORK=testnet`
   - `HEDERA_OPERATOR_ACCOUNT_ID=0.0.11335033`
-  - `HEDERA_OPERATOR_PRIVATE_KEY=0xa569d5bf58099d9e993728d50a5b1143f962d641`
+  - `HEDERA_OPERATOR_PRIVATE_KEY=<REDACTED>`
   - `SPEND_CONTROLLER_HEDERA_ACCOUNT_ID=0.0.11335382`
-  - `SPEND_CONTROLLER_HEDERA_PRIVATE_KEY=25cedb335f7097ae65f774fd717d9ad89b40a3e4d2c76e16194d28bac5d9585f`
-  - `ROUTE_INTEL_MERCHANT_ACCOUNT_ID=0.0.11335386`
-  - `SPEND_CONTROLLER_HARD_CEILING_ATOMIC=50000`
-  - `SPEND_CONTROLLER_PER_REQUEST_CAP_ATOMIC=2000`
-  - `SPEND_CONTROLLER_POLICY_CACHE_TTL_MS=12000`
-  - `X402_OFFICIAL_FACILITATOR_URL=https://x402.org/facilitator`
-  - `X402_BLOCKY402_FACILITATOR_URL=https://api.testnet.blocky402.com`
+  - `SPEND_CONTROLLER_HEDERA_PRIVATE_KEY=<REDACTED>`
+
+**Canonical denomination (VERIFIED):** all `*_ATOMIC` amounts are Hedera
+tinybars. `1 HBAR = 100,000,000 tinybars`, so `ROUTE_INTEL_PRICE_PER_LEG_ATOMIC=100000`
+is `0.001 HBAR`. The per-request cap (200000 = 0.002 HBAR) and the immutable
+hard ceiling (5000000 = 0.05 HBAR) are expressed in the same unit. The old
+`1000 atomic = 0.001 HBAR` / `50000 atomic = 0.05 HBAR` statements were wrong
+and have been removed.
 
 ### Health Checks
 
@@ -131,14 +132,14 @@ pnpm dev  # runs on http://localhost:3002
 ```
 # See dabbawala-backend/.env for full list
 API_PORT=3001
-DATABASE_URL=postgresql://neondb_owner:npg_Ji1umpb8ASlh@...
+DATABASE_URL=postgresql://<REDACTED>
 SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 # ... rest of env vars
 ```
 
 **Frontend `.env`**:
 ```
-NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_API_URL=https://dabbawala-backend-service.onrender.com
 NEXT_PUBLIC_FRONTEND_URL=http://localhost:3002
 ```
 

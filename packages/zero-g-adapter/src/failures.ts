@@ -77,6 +77,74 @@ export function classifyHttpStatus(status: number): "HTTP_RETRYABLE" | "HTTP_FAT
   return "HTTP_FATAL";
 }
 
+/**
+ * Stable operator-facing diagnosis code. This is separate from the frozen
+ * HaltReason and from `detail`: HaltReason stays inside the domain enum, while
+ * `OG_*` tells an operator exactly which 0G prerequisite failed.
+ *
+ * Never contains model text or credentials.
+ */
+export function operationalCode(kind: FailureKind, detail: string): string {
+  switch (kind) {
+    case "BLOCKED":
+      return "OG_NOT_CONFIGURED";
+    case "CONCURRENCY":
+      return "OG_LOCAL_CONCURRENCY_LIMIT";
+    case "INVALID_STATE":
+      return "OG_STATE_INVALID";
+    case "TIMEOUT":
+      return "OG_TIMEOUT";
+    case "NETWORK":
+      return "OG_NETWORK";
+    case "BODY_TOO_LARGE":
+      return "OG_RESPONSE_TOO_LARGE";
+    case "NOT_JSON":
+      return "OG_RESPONSE_NOT_JSON";
+    case "BAD_ENVELOPE":
+      return "OG_RESPONSE_ENVELOPE_INVALID";
+    case "NO_REQUEST_ID":
+      return "OG_REQUEST_ID_MISSING";
+    case "TEE_UNVERIFIED":
+      return detail.includes("MISSING")
+        ? "OG_TEE_VERDICT_MISSING"
+        : "OG_TEE_SIGNATURE_INVALID";
+    case "TRUNCATED":
+      return "OG_OUTPUT_TRUNCATED";
+    case "EMPTY_CONTENT":
+      return "OG_EMPTY_CONTENT";
+    case "BAD_PROPOSAL_JSON":
+      return "OG_PROPOSAL_NOT_JSON";
+    case "BAD_PROPOSAL_SCHEMA":
+      return "OG_PROPOSAL_SCHEMA_INVALID";
+    case "ACTION_NOT_IN_SET":
+      return "OG_ACTION_NOT_IN_SET";
+    case "ACTION_UNGROUNDED":
+      return "OG_ACTION_UNGROUNDED";
+    case "HTTP_RETRYABLE":
+    case "HTTP_FATAL":
+      switch (detail) {
+        case "ROUTER_AUTH_FAILED":
+          return "OG_AUTH_FAILED";
+        case "ROUTER_FORBIDDEN":
+          return "OG_FORBIDDEN";
+        case "ROUTER_INSUFFICIENT_BALANCE":
+          return "OG_INSUFFICIENT_BALANCE";
+        case "ROUTER_NOT_FOUND":
+          return "OG_MODEL_OR_ENDPOINT_NOT_FOUND";
+        case "ROUTER_BAD_REQUEST":
+          return "OG_BAD_REQUEST";
+        case "ROUTER_RATE_LIMITED":
+          return "OG_RATE_LIMITED";
+        case "ROUTER_NO_PROVIDER":
+          return "OG_NO_PROVIDER";
+        case "ROUTER_PROVIDER_ERROR":
+          return "OG_PROVIDER_ERROR";
+        default:
+          return "OG_HTTP_ERROR";
+      }
+  }
+}
+
 /** Short operator-facing code for an HTTP failure; contains no response text. */
 export function httpDetail(status: number): string {
   switch (status) {
