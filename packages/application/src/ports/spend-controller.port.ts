@@ -18,6 +18,11 @@ export interface ISpendController {
    *   - Log spend to HCS. ref: §B-6
    * ref: ROADMAP.md §4.5 interface C
    */
-  buyIntel(legId: string): Promise<BuyIntelResult>;
+  buyIntel(
+    legId: string,
+    robotId?: string,
+    missionId?: string,
+    paymentPurpose?: string,
+  ): Promise<BuyIntelResult>;
 }
 

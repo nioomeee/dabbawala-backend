@@ -9,7 +9,7 @@
 
 import type { FastifyPluginAsync } from "fastify";
 import { GateDecisionBodySchema } from "../../../schemas/console.js";
-import { isAllowlistedApprover, processGateDecision } from "../../../services/gatekeeper.js";
+import { processGateDecision } from "../../../services/gatekeeper.js";
 import { createLogger } from "@dabbawala/observability";
 
 const log = createLogger("api:gate");

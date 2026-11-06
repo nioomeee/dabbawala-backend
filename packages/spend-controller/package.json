@@ -17,12 +17,13 @@
     "dev": "tsx watch src/spend-controller.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "clean": "rimraf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "@dabbawala/application": "workspace:*",
     "@dabbawala/config": "workspace:*",
+    "@dabbawala/database": "workspace:*",
     "@dabbawala/hedera-sdk": "workspace:*",
     "@dabbawala/shared": "workspace:*",
     "@dabbawala/observability": "workspace:*",

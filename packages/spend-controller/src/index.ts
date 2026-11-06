@@ -1,1 +1,5 @@
-export { SpendControllerImpl, createSpendController } from "./spend-controller.js";
+export {
+  SpendControllerImpl,
+  createSpendController,
+  type SpendControllerConfig,
+} from "./spend-controller.js";

@@ -20,27 +20,72 @@ import { err, ok, type Result } from "@dabbawala/shared";
 import { loadConfig } from "@dabbawala/config";
 import { ISpendController } from "@dabbawala/application";
 import { buildHederaClient } from "@dabbawala/hedera-sdk";
-import { AccountId, Hbar, TransferTransaction } from "@hashgraph/sdk";
+import type { Client } from "@hashgraph/sdk";
 import { createLogger } from "@dabbawala/observability";
-import { getDatabase, sql } from "@dabbawala/database";
-import type { PolicySnapshot } from "@dabbawala/shared";
+import { getDatabase, sql, spendRecords, robots } from "@dabbawala/database";
+import type { BuyIntelResult, PolicySnapshot, RobotId } from "@dabbawala/shared";
 
 const log = createLogger("spend-controller");
+
+// ── Configuration Type ────────────────────────────────────────────────────────
+
+export interface SpendControllerConfig {
+  hardCeilingAtomic: string;
+  perRequestCapAtomic: string;
+  policyCacheTtlMs: number;
+  spendControllerAccountId: string;
+  spendControllerPrivateKey: string;
+  hederaNetwork: "testnet" | "mainnet";
+  routeIntelPriceAtomic: string;
+  routeIntelMerchantAccountId: string;
+  x402OfficialFacilitatorUrl: string;
+  x402Blocky402FacilitatorUrl: string;
+}
+
+interface FacilitatorChallenge {
+  facilitatorUrl?: string;
+  paymentRequirements?: unknown;
+  metadata?: unknown;
+  route?: string;
+  traffic?: string;
+}
+
+interface FacilitatorSuccessResponse {
+  transactionId?: string;
+  route?: string;
+  traffic?: string;
+}
+
+type ExecutePaymentResult =
+  | {
+      readonly refused: true;
+      readonly ruleId: string;
+      readonly txId?: undefined;
+      readonly route?: undefined;
+      readonly traffic?: undefined;
+    }
+  | {
+      readonly refused?: false;
+      readonly ruleId?: undefined;
+      readonly txId: string;
+      readonly route?: string;
+      readonly traffic?: string;
+    };
 
 // ── Constant-safe integer math ─────────────────────────────────────────────────
 
 /**
- * Safe addition of two atomic amount strings.
+ * Safe addition of two atomic amount strings or bigints.
  * Returns the sum as a bigint.
  */
-function safeAddAtomic(a: string, b: string): bigint {
-  const na = BigInt(a);
-  const nb = BigInt(b);
+function safeAddAtomic(a: bigint | string, b: bigint | string): bigint {
+  const na = typeof a === "bigint" ? a : BigInt(a);
+  const nb = typeof b === "bigint" ? b : BigInt(b);
   return na + nb;
 }
 
 /**
- * Safe comparison: returns true if a + b > c (atomic amounts).
+ * Safe comparison: returns true if a > b (atomic amounts).
  */
 function safeGreaterThanSum(sum: bigint, cap: bigint): boolean {
   return sum > cap;
@@ -50,13 +95,15 @@ function safeGreaterThanSum(sum: bigint, cap: bigint): boolean {
 
 export class SpendControllerImpl implements ISpendController {
   private readonly config: SpendControllerConfig;
+  public readonly hederaClient: Client;
 
   constructor(config: SpendControllerConfig) {
     this.config = config;
 
     // Initialize Hedera client with Spend Controller's keys using the fixed client
+    const network = config.hederaNetwork === "mainnet" ? "hedera:mainnet" : "hedera:testnet";
     this.hederaClient = buildHederaClient({
-      network: `hedera:${config.hederaNetwork}`,
+      network,
       operatorAccountId: config.spendControllerAccountId,
       operatorPrivateKey: config.spendControllerPrivateKey,
     });
@@ -85,16 +132,10 @@ export class SpendControllerImpl implements ISpendController {
    */
   async buyIntel(
     legId: string,
-    robotId: string,
-    missionId: string,
-    paymentPurpose: string
-  ): Promise<{
-    readonly intel: unknown;
-    readonly txId: string;
-  } | {
-    readonly refused: true;
-    readonly ruleId: string;
-  }> {
+    robotId: string = "ramu",
+    missionId: string = "mission-0",
+    paymentPurpose: string = "route-intel",
+  ): Promise<BuyIntelResult> {
     // 1. Generate deterministic idempotency key derived from mission context
     // This survives API restarts and prevents double-charge on retry
     const idempotencyKey = `spend-${missionId}-${robotId}-${legId}-${paymentPurpose}`;
@@ -107,8 +148,8 @@ export class SpendControllerImpl implements ISpendController {
       .where(sql`${spendRecords.idempotencyKey} = ${idempotencyKey}`)
       .limit(1);
 
-    if (existingRecord.length > 0) {
-      const row = existingRecord[0];
+    const row = existingRecord[0];
+    if (row) {
       log.warn({ idempotencyKey, txId: row.txId, status: row.status }, "Spend Controller: idempotency key already used");
       // Return previously settled result without re-charging
       if (row.status === "CONFIRMED" && row.txId) {
@@ -159,13 +200,15 @@ export class SpendControllerImpl implements ISpendController {
 
     // 7. Policy check: running total within hard ceiling (immutable, cannot be overridden)
     // The hard ceiling is deploy-time immutable; ENS budget cannot override it.
-    const totalSpent = (await getDatabase()
+    const records = await getDatabase()
       .select()
       .from(spendRecords)
-      .where(sql`${spendRecords.robotId} = ${robotId}`)).reduce(
-        (prev: bigint, rec) => safeAddAtomic(prev, rec.amountAtomic),
-        0n
-      );
+      .where(sql`${spendRecords.robotId} = ${robotId}`);
+
+    const totalSpent = records.reduce(
+      (prev: bigint, rec) => prev + BigInt(rec.amountAtomic),
+      0n,
+    );
     const newTotal = safeAddAtomic(totalSpent, amount);
     const hardCeiling = BigInt(this.config.hardCeilingAtomic);
 
@@ -198,7 +241,7 @@ export class SpendControllerImpl implements ISpendController {
         legId,
         robotId,
         amountAtomic,
-        payeeAccountId
+        payeeAccountId,
       );
 
       if (paymentResult.refused) {
@@ -207,16 +250,15 @@ export class SpendControllerImpl implements ISpendController {
 
       // 10. Record spend in PostgreSQL with atomic reservation
       // Persist spend record with idempotency key and settlement state
-      const now = Date.now();
+      const now = new Date();
       await getDatabase().insert(spendRecords).values({
         idempotencyKey,
         legId,
         robotId,
         amountAtomic,
-        payeeAccountId,
         txId: paymentResult.txId,
         status: "CONFIRMED",
-        settledAtMs: now,
+        settledAt: now,
       });
 
       // 11. Log to HCS with actual message sequence
@@ -230,7 +272,7 @@ export class SpendControllerImpl implements ISpendController {
         atomicAmount: amountAtomic,
         transactionId: paymentResult.txId,
         settlementState: "CONFIRMED",
-        timestamp: now,
+        timestamp: now.getTime(),
       });
 
       // 12. Return intel and txId
@@ -254,11 +296,10 @@ export class SpendControllerImpl implements ISpendController {
           legId,
           robotId,
           amountAtomic: this.config.routeIntelPriceAtomic,
-          payeeAccountId: this.config.routeIntelMerchantAccountId,
           txId: "",
           status: "FAILED",
-          failureDetail: message,
-          settledAtMs: Date.now(),
+          failureReason: message,
+          settledAt: new Date(),
         });
       } catch (dbError) {
         log.error({ dbError: (dbError instanceof Error ? dbError.message : String(dbError)) }, "Spend Controller: failed to record failed spend");
@@ -279,14 +320,8 @@ export class SpendControllerImpl implements ISpendController {
     legId: string,
     robotId: string,
     amountAtomic: string,
-    payeeAccountId: string
-  ): Promise<{
-    refused?: true;
-    ruleId?: string;
-    txId?: string;
-    route?: string;
-    traffic?: string;
-  } | { txId: string; route?: string; traffic?: string }> {
+    payeeAccountId: string,
+  ): Promise<ExecutePaymentResult> {
     // Try the official facilitator first (preferred documented supported facilitator)
     const officialUrl = this.config.x402OfficialFacilitatorUrl;
 
@@ -317,7 +352,7 @@ export class SpendControllerImpl implements ISpendController {
 
         if (response.status === 402) {
           // Payment required - read requirements from HTTP 402
-          const requirements = await response.json();
+          const requirements = (await response.json()) as FacilitatorChallenge;
           // Submit payment to facilitator with the provided requirements
           const facilitatorResponse = await fetch(requirements.facilitatorUrl || officialUrl, {
             method: "POST",
@@ -331,7 +366,7 @@ export class SpendControllerImpl implements ISpendController {
           });
 
           if (facilitatorResponse.ok) {
-            const result = await facilitatorResponse.json();
+            const result = (await facilitatorResponse.json()) as FacilitatorSuccessResponse;
             return {
               txId: result.transactionId || "",
               route: requirements.route ?? "optimal",
@@ -342,7 +377,7 @@ export class SpendControllerImpl implements ISpendController {
           return { refused: true, ruleId: "FACILITATOR_ERROR" };
         } else if (response.ok) {
           // Some facilitators accept payment directly without 402 challenge
-          const result = await response.json();
+          const result = (await response.json()) as FacilitatorSuccessResponse;
           return {
             txId: result.transactionId || "",
             route: result.route,
@@ -376,7 +411,7 @@ export class SpendControllerImpl implements ISpendController {
         });
 
         if (response.ok) {
-          const result = await response.json();
+          const result = (await response.json()) as FacilitatorSuccessResponse;
           return {
             txId: result.transactionId || "",
             route: result.route,
@@ -433,7 +468,7 @@ export class SpendControllerImpl implements ISpendController {
       // Persist the message sequence number for auditability
 
       log.debug(
-        { paymentId: spendEvent.paymentId },
+        { paymentId: spendEvent.paymentId, eventJson },
         "Spend Controller: HCS event published (SDK integration pending)",
       );
     } catch (error) {
@@ -457,21 +492,21 @@ export class SpendControllerImpl implements ISpendController {
       .where(sql`${robots.id} = ${robotId}`)
       .limit(1);
 
-    if (rows.length === 0) {
+    const row = rows[0];
+    if (!row) {
       throw new Error(`ENS_UNREADABLE: robot ${robotId} not found`);
     }
-
-    const row = rows[0];
 
     // Return policy from database - use exact integer string for budget
     // No floating-point conversion; maintain original exact integer string
     const budgetAtomic = String(row.ensBudgetAtomic ?? "0");
+    const status = row.ensStatus === "paused" ? "paused" : "active";
 
     return {
-      robotId: row.id,
-      zones: row.ensZones || [],
+      robotId: row.id as RobotId,
+      zones: (row.ensZones || []) as readonly string[],
       budgetAtomic,
-      status: row.ensStatus || "active",
+      status,
       block: row.ensBlockNumber ? BigInt(row.ensBlockNumber) : 0n,
       valuesHash: row.ensValuesHash || "",
       readAtMs: Date.now(),

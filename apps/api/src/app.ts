@@ -7,6 +7,7 @@
  */
 
 import Fastify from "fastify";
+import fastifyCors from "@fastify/cors";
 import { createLogger } from "@dabbawala/observability";
 import { initDatabase } from "@dabbawala/database";
 import { loadConfig } from "@dabbawala/config";
@@ -98,20 +99,17 @@ export function buildApp() {
 
   void app.register(import("@fastify/sensible"));
 
-  void app.register(import("@fastify/cors"), {
-    origin: (origin: string | undefined, callback: (err: any, success?: boolean) => void) => {
+  void app.register(fastifyCors, {
+    origin: async (origin: string | undefined): Promise<boolean> => {
       // Allow production frontend origin
       const allowedOrigins = [
         "https://dabbawala-frontend-alpha.vercel.app",
       ];
-      // Allow all origins in development
-      if (config.NODE_ENV === "development") {
-        callback(null, true);
-      } else if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, false); // reject unknown origin
+      // Allow all origins in development or when no origin header is provided
+      if (config.NODE_ENV === "development" || !origin) {
+        return true;
       }
+      return allowedOrigins.includes(origin);
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   });
