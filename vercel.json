@@ -3,7 +3,6 @@
   "services": {
     "api": {
       "root": "apps/api",
-      "runtime": "nodejs22.x",
       "buildCommand": "pnpm run build",
       "devCommand": "pnpm run dev",
       "installCommand": "pnpm install",
