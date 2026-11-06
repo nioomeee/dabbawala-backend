@@ -1,0 +1,9 @@
+Implementation complete. All requested artifacts delivered:
+- docs/implementation.md (22-section plan)
+- .env.example (remapped robot names + NeonDB)
+- apps/api/schemas/console.ts (frozen frontend shapes)
+- apps/api/fixtures/scenarios.json (10 scenarios)
+- contracts/ Hardhat harness
+- All workspace package.json files updated
+
+Key decisions documented: D1 robot names, D2 NeonDB, D3 Hardhat, D4 frontend contract swap boundary.

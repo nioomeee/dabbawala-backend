@@ -50,7 +50,11 @@ export function haltRobot(
     ...robot,
     status: "halted",
     haltReason: reason,
+<<<<<<< HEAD
     haltDetail: detail as HaltReason | undefined, // exactOptionalPropertyTypes requires explicit union
+=======
+    haltDetail: detail,
+>>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
     updatedAtMs: Date.now(),
   };
 }
@@ -67,12 +71,20 @@ export function resumeRobot(
   if (robot.status !== "halted") {
     throw new Error(`Robot ${robot.id} is not halted; cannot resume`);
   }
+<<<<<<< HEAD
   const { haltReason, haltDetail } = robot;
   return {
     ...robot,
     status: "running",
     haltReason: haltReason,
     haltDetail: haltDetail,
+=======
+  return {
+    ...robot,
+    status: "running",
+    haltReason: undefined,
+    haltDetail: undefined,
+>>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
     lastPolicyBlock: newPolicyBlock,
     lastPolicyHash: newPolicyHash,
     updatedAtMs: Date.now(),

@@ -3,12 +3,16 @@
  * ref: user request §12
  */
 
+<<<<<<< HEAD
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+=======
+>>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
 import { loadConfig } from "@dabbawala/config";
 import { createLogger } from "@dabbawala/observability";
 import { buildApp } from "./app.js";
 
+<<<<<<< HEAD
 // Load environment variables if available
 const envPaths = [
   resolve(process.cwd(), ".env"),
@@ -25,6 +29,8 @@ for (const p of envPaths) {
   }
 }
 
+=======
+>>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
 const log = createLogger("api:main");
 
 async function main(): Promise<void> {
@@ -50,7 +56,12 @@ process.on("SIGINT", () => {
   process.exit(0);
 });
 
+<<<<<<< HEAD
 main().catch((err) => {
   log.error({ err }, "Fatal error during startup");
   process.exit(1);
 });
+=======
+await main();
+
+>>>>>>> 8902192ad8df810e30542a626bce32edd96805bf

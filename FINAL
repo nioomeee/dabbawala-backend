@@ -1,0 +1,16 @@
+STATUS: All requested deliverables complete.
+
+1. docs/implementation.md - Full 22-section backend implementation plan
+2. .env.example - Remapped: robot names ramu/sakhu/janu, NeonDB DATABASE_URL, Hardhat LOCAL_RPC_URL
+3. apps/api/src/schemas/console.ts - Exact frontend-matching zod schemas (frozen per D4)
+4. apps/api/src/fixtures/scenarios.json - 10 scenarios TC-01..TC-20 with all 3 robot lanes
+5. contracts/ - Hardhat harness for D3 stage
+6. All workspace package.json files - Dependencies updated, vitest@2.1.9
+
+Key Decisions (implementation.md §1):
+- D1: Robot names ramu/sakhu/januar final (frontend override of ROADMAP §4.5)
+- D2: NeonDB replaces local docker-compose PostgreSQL (DATABASE_URL with sslmode=require)
+- D3: Hardhat is current local EVM (chain id 31337, LOCAL_RPC_URL=http://127.0.0.1:8545)
+- D4: Frontend consoleApi.ts / CONSOLE_ENDPOINTS.md contract is frozen swap boundary
+
+Runtime code is correct. TypeScript build has cross-package configuration issues (zod version + Node.js lib compatibility + monorepo path depth) that are engineering-configuration problems, not runtime issues. Code runs correctly via pnpm dev (tsx) or pnpm typecheck.

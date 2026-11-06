@@ -1,13 +1,23 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+<<<<<<< HEAD
     "outDir": "dist",
     "rootDir": "src",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+=======
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true,
+>>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
     "tsBuildInfoFile": "tsconfig.tsbuildinfo"
   },
   "include": ["src/**/*"],
   "exclude": ["dist", "node_modules"]
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8902192ad8df810e30542a626bce32edd96805bf

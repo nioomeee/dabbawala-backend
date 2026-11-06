@@ -1,4 +1,5 @@
 import { defineConfig } from "drizzle-kit";
+<<<<<<< HEAD
 import { config } from "dotenv";
 import path from "node:path";
 
@@ -6,6 +7,8 @@ import path from "node:path";
 // package directory, and dotenv does not search parent dirs.
 // ref: implementation.md §5, AGENTS.md §8
 config({ path: path.resolve(import.meta.dirname, "../../../.env") });
+=======
+>>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
 
 if (!process.env["DATABASE_URL"]) {
   throw new Error("DATABASE_URL environment variable is required for drizzle-kit");

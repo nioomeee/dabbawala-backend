@@ -1,5 +1,8 @@
 packages:
   - "apps/*"
   - "packages/*"
+<<<<<<< HEAD
   - "contracts"
+=======
+>>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
 
