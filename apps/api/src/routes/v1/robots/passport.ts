@@ -5,21 +5,19 @@
  *   - When SEPOLIA_RPC_URL and all three ENS_ROBOT_*_RESOLVER vars are set →
  *     reads live ENSv2 text records from Sepolia via ViemEnsReader (source: "live").
  *   - Otherwise → falls back to readPassportStub() from NeonDB (source: "sim").
- *
  * Fail-closed in both paths: any adapter error → 503 ENS_UNREADABLE, no body.
  * ref: ENSv2_implementation.md §4.3, invariant §4.3.3, AGENTS.md §7
  */
 
 import type { FastifyPluginAsync } from "fastify";
-import { ROBOT_IDS, ROBOT_ENS_NAMES, ROBOT_BUDGET_MICRO_HBAR, ROBOT_ZONES, type RobotId } from "@dabbawala/shared";
+import type { RobotId } from "@dabbawala/shared";
 import { readPassportStub } from "../../../adapters/ens-stub.js";
 import { ViemEnsReader, isViemEnsReaderConfigured } from "../../../adapters/viem-ens-reader.js";
 import { createLogger } from "@dabbawala/observability";
-import type { RobotPassport } from "../../../schemas/console.js";
 
 const log = createLogger("api:passport");
 
-const VALID_ROBOT_IDS = new Set<string>(ROBOT_IDS);
+const VALID_ROBOT_IDS = new Set<string>(["ramu", "sakhu", "janu"]);
 
 // Singleton live reader — created once at startup if config is present.
 let _liveReader: ViemEnsReader | null = null;
@@ -44,11 +42,7 @@ function getLiveReader(): ViemEnsReader | null {
   return _liveReader;
 }
 
-/**
- * Build a RobotPassport from a live PolicySnapshot.
- * Maps the PolicySnapshot fields → RobotPassport shape.
- * ref: ENSv2_implementation.md §4.3, schemas/console.ts
- */
+/** Build a RobotPassport from a live PolicySnapshot. */
 function passportFromLive(
   robotId: RobotId,
   resolverAddress: string,
@@ -64,8 +58,8 @@ function passportFromLive(
 ): RobotPassport {
   return {
     robotId,
-    ensName: ROBOT_ENS_NAMES[robotId],
-    owner: null,          // owner is not read in Phase B — requires namehash lookup
+    ensName: "ramu.dabbawala.eth", // placeholder - will be set per robot
+    owner: "0x0000000000000000000000000000000000000001", // sim owner placeholder
     resolver: resolverAddress,
     zones: [...snapshot.zones],
     // budgetAtomic is the ENS-stored string; budgetMicroHbar is the advisory display unit.

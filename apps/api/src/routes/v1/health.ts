@@ -15,23 +15,9 @@
  */
 
 import type { FastifyPluginAsync } from "fastify";
-import { isViemEnsReaderConfigured } from "../../adapters/viem-ens-reader.js";
 import { createLogger } from "@dabbawala/observability";
 
 const log = createLogger("api:health");
-
-type SubsystemStatus = "ok" | "not_configured" | "error";
-
-/** Probe the ENS reader configuration without instantiating the client. */
-function checkEnsReaderStatus(): SubsystemStatus {
-  try {
-    return isViemEnsReaderConfigured() ? "ok" : "not_configured";
-  } catch (err: unknown) {
-    const detail = err instanceof Error ? err.message : String(err);
-    log.warn({ detail }, "/ready: ENS reader config check threw");
-    return "error";
-  }
-}
 
 export const healthRoutes: FastifyPluginAsync = async (app) => {
   app.get(
@@ -48,10 +34,6 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     "/ready",
     async (_req, reply) => {
-      // 0G readiness is computed from config + counters only; never probed
-      // on the request path and never faked. LIVE "configured" vs proven:
-      // the runtime Proves itself only with a real TEE-verified call in this
-      // process. ref: implementations.md §4.2
       const zg = app.zeroG;
       let zeroGCompute: "ok" | "not_configured" | "error";
       let zeroGStorage: "ok" | "not_configured";
@@ -64,21 +46,8 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
         zeroGStorage = rd.storage.status === "BLOCKED" ? "not_configured" : "ok";
       }
 
-      const checks: Record<string, "ok" | "not_configured" | "error"> = {
-        database: "ok",
-        // Honest readiness: "ok" only when the real Sepolia reader is
-        // decorated. Sim stage (no S-ENS env yet) is not_configured, exactly
-        // like the 0G capabilities. Never probed on the request path.
-        ens_reader: app.ens !== null && app.ens !== undefined ? "ok" : "not_configured",
-        zero_g_router: zeroGCompute,
-        zero_g_storage: zeroGStorage,
-      };
-
-      // "not_configured" is an expected offline state — does not degrade readiness.
-      // Only "error" degrades readiness.
-      const critical: SubsystemStatus[] = [checks.database!, checks.ens_reader!];
-      const hasError = critical.some((v) => v === "error");
-      const httpStatus = hasError ? 503 : 200;
+      const httpStatus =
+        zeroGCompute === "ok" && zeroGStorage === "ok" ? 200 : 503;
 
       const zeroGDetail =
         zg === null
@@ -99,13 +68,9 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
           })();
 
       return reply.status(httpStatus).send({
-        status: allOk ? "ready" : "degraded",
-        checks,
+        status: zeroGCompute === "ok" && zeroGStorage === "ok" ? "ready" : "degraded",
         zero_g: zeroGDetail,
         ens: {
-          // Policy source actually wired into the Policy Gate ("ens" = the
-          // Sepolia viem reader; "sim" = the DB stub). The passport remains
-          // source "sim" until the registry owner read is verifiable.
           source: app.ens !== null && app.ens !== undefined ? "ens" : "sim",
         },
       });

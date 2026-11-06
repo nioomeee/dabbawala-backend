@@ -1,0 +1,32 @@
+{
+  "name": "@dabbawala/hedera-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hedera x402 payment integration for the Dabbawala Protocol. Self-signer based on Hiero SDK (R-HE-1, R-HE-5).",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@hashgraph/sdk": "2.41.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.29",
+    "zod": "^3.25.64",
+    "vitest": "2.1.9",
+    "typescript": "^5.8.3"
+  },
+  "type": "module"
+}
