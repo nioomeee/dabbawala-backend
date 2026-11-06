@@ -15,32 +15,20 @@ export interface HederaClientConfig {
   mirrorNodeUrl?: string;
 }
 
-/** Global client instance */
-let _client: Client | null = null;
-
 /**
- * Build a Hedera SDK client from validated config.
+ * Build a NEW Hedera SDK client from validated config.
+ * Returns a fresh client instance each call (no global singleton).
  */
 export function buildHederaClient(config: HederaClientConfig): Client {
-  if (config.network === "hedera:mainnet") {
-    _client = Client.forMainnet();
-  } else {
-    _client = Client.forTestnet();
-  }
+  const client = config.network === "hedera:mainnet"
+    ? Client.forMainnet()
+    : Client.forTestnet();
 
   const operatorId = AccountId.fromString(config.operatorAccountId);
-  const operatorKey = PrivateKey.fromString(config.operatorPrivateKey);
-  _client.setOperator(operatorId, operatorKey);
+  const operatorKey = parseHederaPrivateKey(config.operatorPrivateKey);
+  client.setOperator(operatorId, operatorKey);
 
-  return _client;
-}
-
-/** Get the current client or throw if not initialized */
-export function getClient(): Client {
-  if (!_client) {
-    throw new Error("Hedera client not initialized. Call buildHederaClient first.");
-  }
-  return _client;
+  return client;
 }
 
 /** Validate a Hedera account ID format: "0.0.12345678" */
@@ -60,5 +48,18 @@ export function isValidPrivateKey(key: string): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Parse a Hedera private key. The key in .env is a raw 32-byte ECDSA hex key.
+ * We must use fromStringECDSA for raw keys, not fromString (which expects DER).
+ */
+export function parseHederaPrivateKey(key: string): any {
+  try {
+    return PrivateKey.fromStringECDSA(key);
+  } catch {
+    // Fallback to fromString for DER/PEM formats
+    return PrivateKey.fromString(key);
   }
 }

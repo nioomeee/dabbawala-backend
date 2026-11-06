@@ -19,6 +19,7 @@ import { passportRoutes } from "./routes/v1/robots/passport.js";
 import { gateRoutes } from "./routes/v1/gate/decide.js";
 import { episodeRoutes } from "./routes/v1/episodes/log.js";
 import { internalDecideRoutes } from "./routes/v1/internal/decide.js";
+import { internalSpendRoutes } from "./routes/v1/internal/spend.js";
 
 const log = createLogger("api");
 
@@ -132,6 +133,7 @@ export function buildApp() {
   void app.register(gateRoutes,     { prefix: "/v1" }); // API-4
   void app.register(episodeRoutes,  { prefix: "/v1" }); // API-5
   void app.register(internalDecideRoutes, { prefix: "/v1" }); // B-2 (0G + policy gate)
+  void app.register(internalSpendRoutes, { prefix: "/v1" }); // B-6 (Spend Controller + x402)
 
   // ── Error handler ─────────────────────────────────────────────────────────
 

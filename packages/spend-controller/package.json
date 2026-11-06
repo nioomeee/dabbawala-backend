@@ -1,0 +1,38 @@
+{
+  "name": "@dabbawala/spend-controller",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Spend Controller - Sole signer of Hedera x402 payments",
+  "type": "module",
+  "main": "./dist/spend-controller.js",
+  "types": "./dist/spend-controller.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/spend-controller.d.ts",
+      "import": "./dist/spend-controller.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsx watch src/spend-controller.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@dabbawala/application": "workspace:*",
+    "@dabbawala/config": "workspace:*",
+    "@dabbawala/hedera-sdk": "workspace:*",
+    "@dabbawala/shared": "workspace:*",
+    "@dabbawala/observability": "workspace:*",
+    "@hashgraph/sdk": "^2.41.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.29",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "2.1.9"
+  }
+}
