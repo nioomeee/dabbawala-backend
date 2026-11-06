@@ -15,9 +15,6 @@
  */
 
 import type { FastifyPluginAsync } from "fastify";
-import { createLogger } from "@dabbawala/observability";
-
-const log = createLogger("api:health");
 
 export const healthRoutes: FastifyPluginAsync = async (app) => {
   app.get(

@@ -16,7 +16,7 @@
  * construction time so the API startup check catches it.
  */
 
-import { createPublicClient, http, keccak256, toHex, concat, encodeFunctionData, decodeFunctionResult } from "viem";
+import { createPublicClient, http, keccak256, toHex, encodeFunctionData, decodeFunctionResult } from "viem";
 import { sepolia } from "viem/chains";
 import { packetToBytes } from "viem/ens";
 
