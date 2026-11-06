@@ -31,10 +31,19 @@ export const robots = pgTable(
     haltDetail: text("halt_detail"),
     lastPolicyBlock: bigint("last_policy_block", { mode: "bigint" }),
     lastPolicyHash: varchar("last_policy_hash", { length: 66 }),
+    // ENS policy fields for spend controller and policy engine
+    ensZones: varchar("ens_zones", { length: 512 }).array().default("[]"),
+    ensBudgetAtomic: varchar("ens_budget_atomic", { length: 32 }).notNull().default("0"),
+    ensStatus: varchar("ens_status", { length: 16 }).notNull().default("active"),
+    ensBlockNumber: bigint("ens_block_number", { mode: "bigint" }),
+    ensValuesHash: varchar("ens_values_hash", { length: 66 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("robots_status_idx").on(t.status)],
+  (t) => [
+    index("robots_status_idx").on(t.status),
+    index("robots_ens_status_idx").on(t.ensStatus),
+  ],
 );
 
 // ── Episodes ─────────────────────────────────────────────────────────────────

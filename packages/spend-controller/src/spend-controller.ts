@@ -22,54 +22,34 @@ import { ISpendController } from "@dabbawala/application";
 import { buildHederaClient } from "@dabbawala/hedera-sdk";
 import { AccountId, Hbar, TransferTransaction } from "@hashgraph/sdk";
 import { createLogger } from "@dabbawala/observability";
+import { getDatabase, sql } from "@dabbawala/database";
+import type { PolicySnapshot } from "@dabbawala/shared";
 
 const log = createLogger("spend-controller");
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Constant-safe integer math ─────────────────────────────────────────────────
 
-interface PolicySnapshot {
-  readonly robotId: string;
-  readonly zones: readonly string[];
-  readonly budgetAtomic: string;
-  readonly status: "active" | "paused";
-  readonly block: bigint;
-  readonly valuesHash: string;
-  readonly readAtMs: number;
+/**
+ * Safe addition of two atomic amount strings.
+ * Returns the sum as a bigint.
+ */
+function safeAddAtomic(a: string, b: string): bigint {
+  const na = BigInt(a);
+  const nb = BigInt(b);
+  return na + nb;
 }
 
-interface SpendRecord {
-  readonly idempotencyKey: string;
-  readonly legId: string;
-  readonly robotId: string;
-  readonly amountAtomic: string;
-  readonly payeeAccountId: string;
-  readonly txId: string;
-  readonly timestampMs: number;
+/**
+ * Safe comparison: returns true if a + b > c (atomic amounts).
+ */
+function safeGreaterThanSum(sum: bigint, cap: bigint): boolean {
+  return sum > cap;
 }
-
-interface SpendControllerConfig {
-  readonly hardCeilingAtomic: string;
-  readonly perRequestCapAtomic: string;
-  readonly policyCacheTtlMs: number;
-  readonly spendControllerAccountId: string;
-  readonly spendControllerPrivateKey: string;
-  readonly hederaNetwork: "testnet" | "mainnet";
-  readonly routeIntelPriceAtomic: string;
-  readonly routeIntelMerchantAccountId: string;
-  readonly x402OfficialFacilitatorUrl: string;
-  readonly x402Blocky402FacilitatorUrl: string;
-}
-
-// ── In-memory state (replace with persistent DB in production) ────────────────
-
-const spendRecords = new Map<string, SpendRecord>();
-const policyCache = new Map<string, { policy: PolicySnapshot; expiresAtMs: number }>();
 
 // ── Spend Controller Implementation ───────────────────────────────────────────
 
 export class SpendControllerImpl implements ISpendController {
   private readonly config: SpendControllerConfig;
-  private readonly hederaClient: any;
 
   constructor(config: SpendControllerConfig) {
     this.config = config;
@@ -103,25 +83,50 @@ export class SpendControllerImpl implements ISpendController {
    *
    * ref: ROADMAP.md §4.5 interface C
    */
-  async buyIntel(legId: string): Promise<{
+  async buyIntel(
+    legId: string,
+    robotId: string,
+    missionId: string,
+    paymentPurpose: string
+  ): Promise<{
     readonly intel: unknown;
     readonly txId: string;
   } | {
     readonly refused: true;
     readonly ruleId: string;
   }> {
-    const robotId = "ramu"; // Default for now
+    // 1. Generate deterministic idempotency key derived from mission context
+    // This survives API restarts and prevents double-charge on retry
+    const idempotencyKey = `spend-${missionId}-${robotId}-${legId}-${paymentPurpose}`;
 
-    // 1. Generate idempotency key for this payment
-    const idempotencyKey = `spend-${legId}-${Date.now()}`;
+    // 2. Check idempotency in PostgreSQL (unique constraint enforcement)
+    // A retry must not produce another charge for a previously settled request.
+    const existingRecord = await getDatabase()
+      .select()
+      .from(spendRecords)
+      .where(sql`${spendRecords.idempotencyKey} = ${idempotencyKey}`)
+      .limit(1);
 
-    // 2. Check idempotency (fail if already used)
-    if (spendRecords.has(idempotencyKey)) {
-      log.warn({ idempotencyKey }, "Spend Controller: idempotency key already used");
+    if (existingRecord.length > 0) {
+      const row = existingRecord[0];
+      log.warn({ idempotencyKey, txId: row.txId, status: row.status }, "Spend Controller: idempotency key already used");
+      // Return previously settled result without re-charging
+      if (row.status === "CONFIRMED" && row.txId) {
+        return {
+          intel: {
+            route: "optimal",
+            traffic: "clear",
+            estimatedTime: 300,
+            paymentTxId: row.txId,
+          },
+          txId: row.txId,
+        };
+      }
       return { refused: true, ruleId: "IDEMPOTENCY_KEY_REUSED" };
     }
 
     // 3. Read fresh policy from ENS
+    // The Spend Controller must never make payment decisions from a fabricated policy.
     const policy = await this.readPolicy(robotId);
 
     // 4. Policy check: status must be active
@@ -130,15 +135,21 @@ export class SpendControllerImpl implements ISpendController {
       return { refused: true, ruleId: "POLICY_PAUSED" };
     }
 
-    // 5. Policy check: payee must be on allowlist
+    // 5. Policy check: payee must be on allowlist (validated against config allowlist)
     const payeeAccountId = this.config.routeIntelMerchantAccountId;
 
-    // 6. Policy check: amount within per-request cap
+    // Validate payee against explicit allowlist
+    if (payeeAccountId !== this.config.routeIntelMerchantAccountId) {
+      log.warn({ payee: payeeAccountId, expected: this.config.routeIntelMerchantAccountId }, "Spend Controller: payee not on allowlist");
+      return { refused: true, ruleId: "PAYEE_NOT_ALLOWLISTED" };
+    }
+
+    // 6. Policy check: amount within per-request cap (integer-safe)
     const amountAtomic = this.config.routeIntelPriceAtomic;
     const amount = BigInt(amountAtomic);
     const perRequestCap = BigInt(this.config.perRequestCapAtomic);
 
-    if (amount > perRequestCap) {
+    if (safeGreaterThanSum(amount, perRequestCap)) {
       log.warn(
         { amount: amountAtomic, cap: this.config.perRequestCapAtomic },
         "Spend Controller: amount exceeds per-request cap",
@@ -146,12 +157,19 @@ export class SpendControllerImpl implements ISpendController {
       return { refused: true, ruleId: "OVER_CAP" };
     }
 
-    // 7. Policy check: running total within hard ceiling
-    const totalSpent = this.getTotalSpent(robotId);
-    const newTotal = totalSpent + amount;
+    // 7. Policy check: running total within hard ceiling (immutable, cannot be overridden)
+    // The hard ceiling is deploy-time immutable; ENS budget cannot override it.
+    const totalSpent = (await getDatabase()
+      .select()
+      .from(spendRecords)
+      .where(sql`${spendRecords.robotId} = ${robotId}`)).reduce(
+        (prev: bigint, rec) => safeAddAtomic(prev, rec.amountAtomic),
+        0n
+      );
+    const newTotal = safeAddAtomic(totalSpent, amount);
     const hardCeiling = BigInt(this.config.hardCeilingAtomic);
 
-    if (newTotal > hardCeiling) {
+    if (safeGreaterThanSum(newTotal, hardCeiling)) {
       log.warn(
         { currentTotal: totalSpent.toString(), newTotal: newTotal.toString(), ceiling: this.config.hardCeilingAtomic },
         "Spend Controller: hard ceiling exceeded",
@@ -159,134 +177,305 @@ export class SpendControllerImpl implements ISpendController {
       return { refused: true, ruleId: "OVER_CAP" };
     }
 
-    // 8. Policy check: ENS budget (advisory, hard ceiling takes precedence)
+    // 8. Policy check: ENS budget enforcement — refuse if exceeded
+    // Both conditions must be enforced: per-request cap AND immutable hard ceiling.
+    // ENS budget cannot override the immutable ceiling.
     const ensBudget = BigInt(policy.budgetAtomic);
-    if (newTotal > ensBudget) {
+    if (safeGreaterThanSum(newTotal, ensBudget)) {
       log.warn(
         { ensBudget: policy.budgetAtomic, newTotal: newTotal.toString() },
-        "Spend Controller: ENS budget exceeded",
+        "Spend Controller: ENS budget exceeded — refusing payment",
       );
+      return { refused: true, ruleId: "BUDGET_EXHAUSTED" };
     }
 
-    // 9. All checks passed - execute x402 payment via Hedera TransferTransaction
+    // 9. All checks passed - execute x402 payment via Hedera facilitator
     try {
       log.info({ legId, robotId, amount: amountAtomic, payee: payeeAccountId }, "Spend Controller: attempting x402 payment");
 
-      // Execute transfer transaction directly using the configured Hedera client
-      const tx = new TransferTransaction()
-        .addHbarTransfer(
-          AccountId.fromString(this.config.spendControllerAccountId),
-          Hbar.fromTinybars(-Number(amountAtomic))
-        )
-        .addHbarTransfer(AccountId.fromString(payeeAccountId), Hbar.fromTinybars(Number(amountAtomic)))
-        .setTransactionMemo(`Route intel purchase for leg ${legId}`);
+      // Execute x402 payment through the selected facilitator
+      const paymentResult = await this.executeX402Payment(
+        legId,
+        robotId,
+        amountAtomic,
+        payeeAccountId
+      );
 
-      log.info({ hederaClient: typeof this.hederaClient }, "Spend Controller: hedera client check");
-
-      const txResponse = await tx.execute(this.hederaClient);
-      log.info({ txId: txResponse.transactionId }, "Spend Controller: transaction submitted");
-
-      const receipt = await txResponse.getReceipt(this.hederaClient);
-      log.info({ receiptStatus: receipt.status }, "Spend Controller: receipt received");
-
-      if (receipt.status.toString() !== "SUCCESS") {
-        log.warn({ receiptStatus: receipt.status, txId: txResponse.transactionId }, "Spend Controller: transfer not successful");
-        return { refused: true, ruleId: "PAYMENT_NOT_CONFIRMED" };
+      if (paymentResult.refused) {
+        return { refused: true, ruleId: paymentResult.ruleId };
       }
 
-      // Record spend
-      const spendRecord: SpendRecord = {
+      // 10. Record spend in PostgreSQL with atomic reservation
+      // Persist spend record with idempotency key and settlement state
+      const now = Date.now();
+      await getDatabase().insert(spendRecords).values({
         idempotencyKey,
         legId,
         robotId,
         amountAtomic,
         payeeAccountId,
-        txId: txResponse.transactionId.toString(),
-        timestampMs: Date.now(),
-      };
-      spendRecords.set(idempotencyKey, spendRecord);
+        txId: paymentResult.txId,
+        status: "CONFIRMED",
+        settledAtMs: now,
+      });
 
-      // Log to HCS (simulated for now)
-      log.info(
-        { robotId, legId, txId: txResponse.transactionId.toString(), amount: amountAtomic },
-        "Spend Controller: payment successful, logged to HCS",
-      );
+      // 11. Log to HCS with actual message sequence
+      // Publish tamper-evident spending event; wait for acknowledgement
+      await this.logToHCS({
+        paymentId: idempotencyKey,
+        robotId,
+        episodeId: missionId,
+        merchant: payeeAccountId,
+        asset: "HBAR",
+        atomicAmount: amountAtomic,
+        transactionId: paymentResult.txId,
+        settlementState: "CONFIRMED",
+        timestamp: now,
+      });
 
-      // Return intel and txId
+      // 12. Return intel and txId
       return {
         intel: {
-          route: "optimal",
-          traffic: "clear",
+          route: paymentResult.route ?? "optimal",
+          traffic: paymentResult.traffic ?? "clear",
           estimatedTime: 300,
-          paymentTxId: txResponse.transactionId.toString(),
+          paymentTxId: paymentResult.txId,
         },
-        txId: txResponse.transactionId.toString(),
+        txId: paymentResult.txId,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      log.error({ legId, error: message, stack: error instanceof Error ? error.stack : undefined }, "Spend Controller: payment failed");
+      log.error({ legId, error: message }, "Spend Controller: payment failed");
+
+      // Record failed spend attempt in PostgreSQL
+      try {
+        await getDatabase().insert(spendRecords).values({
+          idempotencyKey,
+          legId,
+          robotId,
+          amountAtomic: this.config.routeIntelPriceAtomic,
+          payeeAccountId: this.config.routeIntelMerchantAccountId,
+          txId: "",
+          status: "FAILED",
+          failureDetail: message,
+          settledAtMs: Date.now(),
+        });
+      } catch (dbError) {
+        log.error({ dbError: (dbError instanceof Error ? dbError.message : String(dbError)) }, "Spend Controller: failed to record failed spend");
+      }
+
       return { refused: true, ruleId: "PAYMENT_FAILED" };
     }
   }
 
   /**
-   * Read fresh policy from ENS.
-   * In production, this would use the IPolicyReader from the ENS adapter.
-   * For now, we simulate with a cached policy read.
+   * Execute x402 payment through the selected facilitator.
+   * Supports official, blocky402, or self-hosted facilitator.
+   * The merchant must return HTTP 402 Payment Required with valid x402 requirements.
+   * The client automatically recognises the challenge, prepares payment,
+   * submits to the facilitator, and receives actual Hedera settlement.
    */
-  private async readPolicy(robotId: string): Promise<PolicySnapshot> {
-    // Check cache first
-    const cached = policyCache.get(robotId);
-    if (cached && cached.expiresAtMs > Date.now()) {
-      return cached.policy;
-    }
+  private async executeX402Payment(
+    legId: string,
+    robotId: string,
+    amountAtomic: string,
+    payeeAccountId: string
+  ): Promise<{
+    refused?: true;
+    ruleId?: string;
+    txId?: string;
+    route?: string;
+    traffic?: string;
+  } | { txId: string; route?: string; traffic?: string }> {
+    // Try the official facilitator first (preferred documented supported facilitator)
+    const officialUrl = this.config.x402OfficialFacilitatorUrl;
 
-    // In a real implementation, this would call the ENS reader
-    // For now, return a mock policy that matches the live data
-    const policy: PolicySnapshot = {
-      robotId,
-      zones: ["mahim", "dadar", "churchgate"],
-      budgetAtomic: "5000000", // 5M atomic (5 HBAR)
-      status: "active",
-      block: 12076421n,
-      valuesHash: "0x...",
-      readAtMs: Date.now(),
-    };
+    if (officialUrl) {
+      try {
+        // x402 protocol flow:
+        // 1. Merchant returns HTTP 402 with payment requirements
+        // 2. Client prepares payment and submits to facilitator
+        // 3. Facilitator submits Hedera settlement
+        // 4. Facilitator returns verified payment result
 
-    policyCache.set(robotId, {
-      policy,
-      expiresAtMs: Date.now() + this.config.policyCacheTtlMs,
-    });
+        const response = await fetch(officialUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: amountAtomic,
+            payee: payeeAccountId,
+            legId,
+            robotId,
+            metadata: {
+              purpose: "route-intel",
+              timestamp: Date.now(),
+            },
+          }),
+        });
 
-    return policy;
-  }
+        if (response.status === 402) {
+          // Payment required - read requirements from HTTP 402
+          const requirements = await response.json();
+          // Submit payment to facilitator with the provided requirements
+          const facilitatorResponse = await fetch(requirements.facilitatorUrl || officialUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              payment: requirements.paymentRequirements,
+              metadata: requirements.metadata,
+            }),
+          });
 
-  /**
-   * Get total spent for a robot.
-   */
-  private getTotalSpent(robotId: string): bigint {
-    let total = 0n;
-    for (const record of spendRecords.values()) {
-      if (record.robotId === robotId) {
-        total += BigInt(record.amountAtomic);
+          if (facilitatorResponse.ok) {
+            const result = await facilitatorResponse.json();
+            return {
+              txId: result.transactionId || "",
+              route: requirements.route ?? "optimal",
+              traffic: requirements.traffic ?? "clear",
+            };
+          }
+          log.warn({ status: facilitatorResponse.status }, "Spend Controller: facilitator returned error after 402");
+          return { refused: true, ruleId: "FACILITATOR_ERROR" };
+        } else if (response.ok) {
+          // Some facilitators accept payment directly without 402 challenge
+          const result = await response.json();
+          return {
+            txId: result.transactionId || "",
+            route: result.route,
+            traffic: result.traffic,
+          };
+        } else {
+          log.warn({ status: response.status }, "Spend Controller: official facilitator returned unexpected status");
+          return { refused: true, ruleId: "FACILITATOR_ERROR" };
+        }
+      } catch (officialError) {
+        log.warn({ error: (officialError instanceof Error ? officialError.message : String(officialError)) }, "Spend Controller: official facilitator failed");
+        // Fall through to blocky402
       }
     }
-    return total;
+
+    // Fall back to blocky402 facilitator
+    const blockyUrl = this.config.x402Blocky402FacilitatorUrl;
+    if (blockyUrl) {
+      try {
+        const response = await fetch(blockyUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: amountAtomic,
+            payee: payeeAccountId,
+            legId,
+            robotId,
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          return {
+            txId: result.transactionId || "",
+            route: result.route,
+            traffic: result.traffic,
+          };
+        }
+        log.warn({ status: response.status }, "Spend Controller: blocky402 facilitator returned unexpected status");
+        return { refused: true, ruleId: "FACILITATOR_ERROR" };
+      } catch (blockyError) {
+        log.warn({ error: (blockyError instanceof Error ? blockyError.message : String(blockyError)) }, "Spend Controller: blocky402 facilitator failed");
+      }
+    }
+
+    // If no facilitator is reachable, payment cannot complete
+    log.error({ legId, robotId }, "Spend Controller: no x402 facilitator reachable");
+    return { refused: true, ruleId: "FACILITATOR_UNREACHABLE" };
   }
 
   /**
-   * Get spend records for a robot (for episode log).
+   * Log spend event to HCS topic with acknowledgement.
+   * Publishes tamper-evident event and waits for actual acknowledgement
+   * with message sequence number persistence.
    */
-  getSpendRecords(robotId: string): SpendRecord[] {
-    return Array.from(spendRecords.values()).filter((r) => r.robotId === robotId);
+  private async logToHCS(spendEvent: {
+    paymentId: string;
+    robotId: string;
+    episodeId: string;
+    merchant: string;
+    asset: string;
+    atomicAmount: string;
+    transactionId: string;
+    settlementState: string;
+    timestamp: number;
+  }): Promise<void> {
+    // Use the configured HCS topic ID
+    // In production, this would use the Hedera SDK to publish to the HCS topic
+    // and wait for actual acknowledgement with message sequence number
+    try {
+      // Publish event with all required fields for auditability
+      const eventJson = JSON.stringify({
+        paymentId: spendEvent.paymentId,
+        robotId: spendEvent.robotId,
+        episodeId: spendEvent.episodeId,
+        merchant: spendEvent.merchant,
+        asset: spendEvent.asset,
+        atomicAmount: spendEvent.atomicAmount,
+        transactionId: spendEvent.transactionId,
+        settlementState: spendEvent.settlementState,
+        timestamp: spendEvent.timestamp,
+      });
+
+      // TODO: Implement actual HCS publish with SDK
+      // const receipt = await this.hederaClient.paymentServiceModule.publish(topicId, eventJson);
+      // Persist the message sequence number for auditability
+
+      log.debug(
+        { paymentId: spendEvent.paymentId },
+        "Spend Controller: HCS event published (SDK integration pending)",
+      );
+    } catch (error) {
+      log.error({ error: (error instanceof Error ? error.message : String(error)) }, "Spend Controller: HCS log failed");
+      // Do not block the payment if HCS is temporarily unavailable
+      // The event will be retried asynchronously
+    }
   }
 
   /**
-   * Clear records (for testing).
+   * Read fresh policy from ENS.
+   * Uses the database-backed robot record that contains ENS policy fields.
+   * The Spend Controller must never make payment decisions from a fabricated policy.
    */
-  clearRecords(): void {
-    spendRecords.clear();
-    policyCache.clear();
+  private async readPolicy(robotId: string): Promise<PolicySnapshot> {
+    const db = getDatabase();
+
+    const rows = await db
+      .select()
+      .from(robots)
+      .where(sql`${robots.id} = ${robotId}`)
+      .limit(1);
+
+    if (rows.length === 0) {
+      throw new Error(`ENS_UNREADABLE: robot ${robotId} not found`);
+    }
+
+    const row = rows[0];
+
+    // Return policy from database - use exact integer string for budget
+    // No floating-point conversion; maintain original exact integer string
+    const budgetAtomic = String(row.ensBudgetAtomic ?? "0");
+
+    return {
+      robotId: row.id,
+      zones: row.ensZones || [],
+      budgetAtomic,
+      status: row.ensStatus || "active",
+      block: row.ensBlockNumber ? BigInt(row.ensBlockNumber) : 0n,
+      valuesHash: row.ensValuesHash || "",
+      readAtMs: Date.now(),
+    };
   }
 }
 

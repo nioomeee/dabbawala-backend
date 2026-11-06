@@ -50,18 +50,36 @@ const ROBOT_SEED_DATA = [
     status: "idle",
     currentCell: "depot",
     checkpointIndex: 0,
+    // ENS policy fields
+    ensZones: ["mahim", "dadar", "churchgate"],
+    ensBudgetAtomic: "5000000",
+    ensStatus: "active",
+    ensBlockNumber: 12076421n,
+    ensValuesHash: "0xdummyhash1234567890abcdef1234567890abcdef1234567890abcdef12345678",
   },
   {
     id: "sakhu",
     status: "idle",
     currentCell: "depot",
     checkpointIndex: 0,
+    // ENS policy fields
+    ensZones: ["mahim", "dadar"],
+    ensBudgetAtomic: "5000000",
+    ensStatus: "active",
+    ensBlockNumber: 12076421n,
+    ensValuesHash: "0xdummyhash1234567890abcdef1234567890abcdef1234567890abcdef12345678",
   },
   {
     id: "janu",
     status: "idle",
     currentCell: "depot",
     checkpointIndex: 0,
+    // ENS policy fields
+    ensZones: ["docks-r2"],
+    ensBudgetAtomic: "5000000",
+    ensStatus: "active",
+    ensBlockNumber: 12076421n,
+    ensValuesHash: "0xdummyhash1234567890abcdef1234567890abcdef1234567890abcdef12345678",
   },
 ] as const;
 
