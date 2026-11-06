@@ -18,6 +18,7 @@ import { scenarioRoutes } from "./routes/v1/console/scenarios.js";
 import { passportRoutes } from "./routes/v1/robots/passport.js";
 import { gateRoutes } from "./routes/v1/gate/decide.js";
 import { episodeRoutes } from "./routes/v1/episodes/log.js";
+import { evidenceUploadRoutes } from "./routes/v1/evidence/upload.js";
 import { internalDecideRoutes } from "./routes/v1/internal/decide.js";
 import { internalSpendRoutes } from "./routes/v1/internal/spend.js";
 import { missionDecideRoutes } from "./routes/v1/mission/decide.js";
@@ -98,7 +99,20 @@ export function buildApp() {
   void app.register(import("@fastify/sensible"));
 
   void app.register(import("@fastify/cors"), {
-    origin: config.NODE_ENV === "development" ? true : false,
+    origin: (origin: string | undefined, callback: (err: any, success?: boolean) => void) => {
+      // Allow production frontend origin
+      const allowedOrigins = [
+        "https://dabbawala-frontend-alpha.vercel.app",
+      ];
+      // Allow all origins in development
+      if (config.NODE_ENV === "development") {
+        callback(null, true);
+      } else if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false); // reject unknown origin
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   });
 
@@ -134,6 +148,7 @@ export function buildApp() {
   void app.register(passportRoutes, { prefix: "/v1" }); // API-3
   void app.register(gateRoutes,     { prefix: "/v1" }); // API-4
   void app.register(episodeRoutes,  { prefix: "/v1" }); // API-5
+  void app.register(evidenceUploadRoutes,  { prefix: "/v1" }); // API-5e (evidence upload)
   void app.register(internalDecideRoutes, { prefix: "/v1" }); // B-2 (0G + policy gate)
   void app.register(internalSpendRoutes, { prefix: "/v1" }); // B-6 (Spend Controller + x402)
   void app.register(missionDecideRoutes, { prefix: "/v1" }); // Mission decision (public API)

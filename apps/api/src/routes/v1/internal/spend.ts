@@ -42,10 +42,12 @@ export const internalSpendRoutes: FastifyPluginAsync = async (app) => {
         summary: "Spend Controller buys route intel via x402 payment",
         body: {
           type: "object",
-          required: ["legId", "robotId"],
+          required: ["legId", "robotId", "missionId", "paymentPurpose"],
           properties: {
             legId: { type: "string" },
             robotId: { type: "string", enum: ["ramu", "sakhu", "janu"] },
+            missionId: { type: "string" },
+            paymentPurpose: { type: "string" },
           },
         },
         response: {
@@ -64,7 +66,12 @@ export const internalSpendRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (req, reply) => {
-      const { legId, robotId } = req.body as { legId: string; robotId: "ramu" | "sakhu" | "janu" };
+      const { legId, robotId, missionId, paymentPurpose } = req.body as {
+        legId: string;
+        robotId: "ramu" | "sakhu" | "janu";
+        missionId: string;
+        paymentPurpose: string;
+      };
 
       if (!legId || !robotId) {
         return reply.status(400).send({ error: "INVALID_REQUEST_BODY" });
@@ -77,7 +84,7 @@ export const internalSpendRoutes: FastifyPluginAsync = async (app) => {
       }
 
       try {
-        const result = await controller.buyIntel(legId);
+        const result = await controller.buyIntel(legId, robotId, missionId, paymentPurpose);
 
         if ("refused" in result) {
           log.warn(

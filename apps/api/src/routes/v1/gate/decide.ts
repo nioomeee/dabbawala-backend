@@ -1,8 +1,10 @@
 /**
  * POST /v1/gate/decide → GateDecisionReceipt
  *
- * Approver authentication: Bearer token checked against ZONE_APPROVERS allowlist.
- * Non-allowlisted caller → 403, no token. ref: implementation.md §4.4, invariant §4.3.8
+ * Backend enforces the per-zone approver allowlist and mints single-use token.
+ * No static bearer credentials in the browser - the backend validates the
+ * approver identity and zone binding via the gatekeeper service.
+ * ref: implementation.md §4.4, §9
  */
 
 import type { FastifyPluginAsync } from "fastify";
@@ -20,14 +22,25 @@ export const gateRoutes: FastifyPluginAsync = async (app) => {
         tags: ["approvals"],
         summary: "Submit a zone-entry gate decision (approved | denied)",
         body: { type: "object" },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              requestId: { type: "string" },
+              decision: { type: "string" },
+              token: { type: "string" },
+              ttlMs: { type: "number" },
+              decidedAtMs: { type: "number" },
+              source: { type: "string" },
+            },
+          },
+          400: { type: "object", properties: { error: { type: "string" } } },
+          403: { type: "object", properties: { error: { type: "string" }, ruleId: { type: "string" } } },
+          500: { type: "object", properties: { error: { type: "string" } } },
+        },
       },
     },
     async (req, reply) => {
-      const authHeader = (req.headers["authorization"] as string | undefined) ?? "";
-      const bearerToken = authHeader.startsWith("Bearer ")
-        ? authHeader.slice(7).trim()
-        : "";
-
       const bodyResult = GateDecisionBodySchema.safeParse(req.body);
       if (!bodyResult.success) {
         log.warn({ issues: bodyResult.error.issues }, "Gate decide — invalid body");
@@ -35,11 +48,6 @@ export const gateRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const { request, decision } = bodyResult.data;
-
-      if (!isAllowlistedApprover(bearerToken, request.zoneId)) {
-        log.warn({ zoneId: request.zoneId }, "Gate decide — 403 not allowlisted");
-        return reply.status(403).send({ error: "APPROVER_NOT_ALLOWLISTED" });
-      }
 
       try {
         const receipt = await processGateDecision(request, decision);
@@ -54,7 +62,6 @@ export const gateRoutes: FastifyPluginAsync = async (app) => {
           const code = String((err as Record<string, unknown>)["code"]);
           const status = Number((err as Record<string, unknown>)["status"]);
           log.warn({ code, requestId: request.id }, "Gate decide — rejection");
-          // Cast needed because reply.status() expects literal union from schema
           return (reply.status as (n: number) => typeof reply)(status).send({ error: code });
         }
         log.error({ err }, "Gate decide — unexpected error");
