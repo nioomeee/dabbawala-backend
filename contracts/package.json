@@ -8,6 +8,7 @@
     "hardhat:test": "hardhat test",
     "hardhat:node": "hardhat node",
     "ens:deploy:local": "hardhat run scripts/ens-local.ts",
+    "ens:deploy:sepolia": "hardhat run scripts/ens-sepolia.ts --network sepolia",
     "clean": "rimraf cache artifacts typechain typechain-types"
   },
   "devDependencies": {

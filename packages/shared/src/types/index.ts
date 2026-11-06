@@ -10,7 +10,6 @@
 
 // ── Robot identity ────────────────────────────────────────────────────────────
 
-<<<<<<< HEAD
 /**
  * The three robots in the Mumbai demo.
  * Names finalised per implementation.md §2 (D1) on 2026-10-31.
@@ -46,16 +45,6 @@ export const ROBOT_ZONES: Readonly<Record<RobotId, readonly string[]>> = {
   sakhu: ["mahim", "dadar"],
   janu: ["docks-r2"],
 } as const;
-=======
-/** The three robots in the Mumbai demo. ref: ROADMAP.md §4.5 */
-export type RobotId = "andheri-01" | "bandra-02" | "colaba-03";
-
-export const ROBOT_IDS: readonly RobotId[] = [
-  "andheri-01",
-  "bandra-02",
-  "colaba-03",
-] as const;
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
 
 // ── Closed action set ─────────────────────────────────────────────────────────
 
@@ -83,11 +72,7 @@ export const ACTION_TYPES: readonly ActionType[] = [
 /**
  * Block-stamped policy snapshot read from ENS.
  * The policy engine must validate every action against a fresh snapshot.
-<<<<<<< HEAD
  * Cache TTL: 10-15 s. ref: ROADMAP.md §4.9, invariant §4.3.3
-=======
- * Cache TTL: 10–15 s. ref: ROADMAP.md §4.9, invariant §4.3.3
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
  */
 export type PolicySnapshot = {
   readonly robotId: RobotId;
@@ -151,11 +136,7 @@ export type Halt = {
 
 /**
  * State summary passed to the Fleet Brain's decide() call.
-<<<<<<< HEAD
  * This is a bounded, sanitised view of the robot state - never raw key material.
-=======
- * This is a bounded, sanitised view of the robot state — never raw key material.
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
  * ref: ROADMAP.md §4.5, invariant §4.3.6
  */
 export type StateSummary = {
@@ -239,11 +220,7 @@ export type EpisodeLogHeader = {
   readonly startedAtMs: number;
 };
 
-<<<<<<< HEAD
 /** Footer line of an episode log file - carries the Merkle root. */
-=======
-/** Footer line of an episode log file — carries the Merkle root. */
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
 export type EpisodeLogFooter = {
   readonly type: "footer";
   readonly seq: number;
@@ -297,7 +274,6 @@ export const ZERO_G_MAX_RETRIES = 1 as const;
 /** Episode log schema version. ref: ROADMAP.md §4.6 */
 export const EPISODE_LOG_SCHEMA_VERSION = "1.0" as const;
 
-<<<<<<< HEAD
 // ── ENS record keys ──────────────────────────────────────────────────────────
 
 /**
@@ -447,5 +423,3 @@ export type PolicyReadError = {
 // GateDecisionReceipt is declared in schemas.ts; kept here as a note that the
 // single-use token is bound to (robot, zone, nonce, 0G request id), TTL <= 60s.
 // ref: ROADMAP.md §4.3.7, §4.11
-=======
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf

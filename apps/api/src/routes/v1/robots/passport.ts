@@ -1,19 +1,86 @@
 /**
  * GET /v1/robots/:id/passport → RobotPassport
  *
- * Hardhat stage: reads from DB via ENS stub adapter.
- * Fail-closed: any adapter error → 503 ENS_UNREADABLE, no cached body.
- * ref: implementation.md §4.3, invariant §4.3.3, AGENTS.md §7
+ * Env-switching policy:
+ *   - When SEPOLIA_RPC_URL and all three ENS_ROBOT_*_RESOLVER vars are set →
+ *     reads live ENSv2 text records from Sepolia via ViemEnsReader (source: "live").
+ *   - Otherwise → falls back to readPassportStub() from NeonDB (source: "sim").
+ *
+ * Fail-closed in both paths: any adapter error → 503 ENS_UNREADABLE, no body.
+ * ref: ENSv2_implementation.md §4.3, invariant §4.3.3, AGENTS.md §7
  */
 
 import type { FastifyPluginAsync } from "fastify";
-import { ROBOT_IDS, type RobotId } from "@dabbawala/shared";
+import { ROBOT_IDS, ROBOT_ENS_NAMES, ROBOT_BUDGET_MICRO_HBAR, ROBOT_ZONES, type RobotId } from "@dabbawala/shared";
 import { readPassportStub } from "../../../adapters/ens-stub.js";
+import { ViemEnsReader, isViemEnsReaderConfigured } from "../../../adapters/viem-ens-reader.js";
 import { createLogger } from "@dabbawala/observability";
+import type { RobotPassport } from "../../../schemas/console.js";
 
 const log = createLogger("api:passport");
 
 const VALID_ROBOT_IDS = new Set<string>(ROBOT_IDS);
+
+// Singleton live reader — created once at startup if config is present.
+let _liveReader: ViemEnsReader | null = null;
+let _liveReaderChecked = false;
+
+function getLiveReader(): ViemEnsReader | null {
+  if (!_liveReaderChecked) {
+    _liveReaderChecked = true;
+    if (isViemEnsReaderConfigured()) {
+      try {
+        _liveReader = new ViemEnsReader();
+        log.info("ENS mode: LIVE (ViemEnsReader on Sepolia)");
+      } catch (err: unknown) {
+        const detail = err instanceof Error ? err.message : String(err);
+        log.warn({ detail }, "ViemEnsReader construction failed — falling back to sim");
+        _liveReader = null;
+      }
+    } else {
+      log.info("ENS mode: SIM (SEPOLIA_RPC_URL or resolver addresses not configured)");
+    }
+  }
+  return _liveReader;
+}
+
+/**
+ * Build a RobotPassport from a live PolicySnapshot.
+ * Maps the PolicySnapshot fields → RobotPassport shape.
+ * ref: ENSv2_implementation.md §4.3, schemas/console.ts
+ */
+function passportFromLive(
+  robotId: RobotId,
+  resolverAddress: string,
+  snapshot: {
+    zones: readonly string[];
+    budgetAtomic: string;
+    status: "active" | "paused";
+    block: bigint;
+    valuesHash: string;
+    readAtMs: number;
+  },
+  lastEpisode: string | null,
+): RobotPassport {
+  return {
+    robotId,
+    ensName: ROBOT_ENS_NAMES[robotId],
+    owner: null,          // owner is not read in Phase B — requires namehash lookup
+    resolver: resolverAddress,
+    zones: [...snapshot.zones],
+    // budgetAtomic is the ENS-stored string; budgetMicroHbar is the advisory display unit.
+    // Live reads use the ENS budget directly (treating it as microHbar for now — advisory only).
+    budgetMicroHbar: Number(snapshot.budgetAtomic),
+    status: snapshot.status,
+    lastEpisode,
+    block: {
+      number: Number(snapshot.block),
+      hash: snapshot.valuesHash, // values hash as the block fingerprint for live reads
+      scannedAtMs: snapshot.readAtMs,
+    },
+    source: "live",
+  };
+}
 
 export const passportRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Params: { id: string } }>(
@@ -21,7 +88,7 @@ export const passportRoutes: FastifyPluginAsync = async (app) => {
     {
       schema: {
         tags: ["robots"],
-        summary: "Get robot passport (stub ENS on Hardhat stage)",
+        summary: "Get robot passport — live ENS on Sepolia or sim stub",
         params: {
           type: "object",
           properties: { id: { type: "string" } },
@@ -50,11 +117,36 @@ export const passportRoutes: FastifyPluginAsync = async (app) => {
         return reply.status(400).send({ error: "UNKNOWN_ROBOT_ID" });
       }
 
+      const robotId = id as RobotId;
+      const liveReader = getLiveReader();
+
+      if (liveReader) {
+        // ── Live path: Sepolia ENS reads ────────────────────────────────────
+        try {
+          const snapshot = await liveReader.readPolicy(robotId);
+          const cfg = (await import("@dabbawala/config")).getConfig();
+          const resolverKey = `ENS_ROBOT_${robotId.toUpperCase()}_RESOLVER` as keyof typeof cfg;
+          const resolverAddress = (cfg[resolverKey] as string | undefined) ?? null;
+
+          const passport = passportFromLive(
+            robotId,
+            resolverAddress ?? "0x0000000000000000000000000000000000000000",
+            snapshot,
+            null, // lastEpisode not separately read in live path yet
+          );
+          return reply.send(passport);
+        } catch (err: unknown) {
+          log.error({ robotId, err }, "Live ENS read failed — failing closed");
+          return reply.status(503).send({ error: "ENS_UNREADABLE", stale: false });
+        }
+      }
+
+      // ── Sim path: NeonDB stub ────────────────────────────────────────────
       try {
-        const passport = await readPassportStub(id as RobotId);
+        const passport = await readPassportStub(robotId);
         return reply.send(passport);
       } catch (err: unknown) {
-        log.error({ robotId: id, err }, "ENS stub failure — failing closed");
+        log.error({ robotId, err }, "ENS stub failure — failing closed");
         return reply.status(503).send({ error: "ENS_UNREADABLE", stale: false });
       }
     },

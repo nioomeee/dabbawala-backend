@@ -179,9 +179,10 @@ Fill each line. Leave `PASTE_HERE` if unknown. The agent must refuse to proceed 
 |---|---|---|---|
 | x402 monorepo URL (build `@x402/hedera` from here) | PASTE_HERE (an unverified guess is `github.com/coinbase/x402`; confirm before use) | | |
 | Exact-scheme Hedera client path inside the monorepo | PASTE_HERE | | |
-| ENSv2 Sepolia deployments page / addresses (registry, factory) | PASTE_HERE | | |
-| ENS Verifiable Factory address on Sepolia | PASTE_HERE | | |
-| viem version that resolves ENSv2 names | PASTE_HERE | | |
+| ENSv2 Sepolia deployments page / addresses (registry, factory) | https://docs.ens.domains/learn/deployments#sepolia-ensv2 | docs.ens.domains | 2026-11-06 |
+| ENS Verifiable Factory address on Sepolia | 0x77510ba162dfea3d8989e3f0928a691b345730d2 | docs.ens.domains | 2026-11-06 |
+| ENS PermissionedResolverImpl address on Sepolia | 0x565b0f456a04ac9b48758190e90030623cff57c5 | docs.ens.domains | 2026-11-06 |
+| viem version that resolves ENSv2 names | 2.57.16 | package.json | 2026-11-06 |
 | Permissioned Resolver ABI source | PASTE_HERE | | |
 | Parent ENS name chosen and registered | PASTE_HERE | | |
 | Hedera HCS topic id for spend logs | PASTE_HERE (created during the build) | | |

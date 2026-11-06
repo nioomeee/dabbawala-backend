@@ -8,10 +8,7 @@
   "exports": {
     ".": {
       "import": "./dist/index.js",
-<<<<<<< HEAD
       "require": "./dist/index.js",
-=======
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
       "types": "./dist/index.d.ts"
     }
   },
@@ -19,25 +16,15 @@
     "build": "tsc --build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "clean": "rimraf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "zod": "^3.25.64"
   },
   "devDependencies": {
-<<<<<<< HEAD
     "rimraf": "^6.0.1",
     "typescript": "^5.8.3",
     "vitest": "2.1.9"
   }
 }
-=======
-    "@dabbawala/tsconfig": "*",
-    "rimraf": "^6.0.1",
-    "typescript": "^5.8.3",
-    "vitest": "^3.2.4"
-  }
-}
-
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf

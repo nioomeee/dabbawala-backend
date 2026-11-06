@@ -31,6 +31,12 @@ const config: HardhatUserConfig = {
       chainId: 31337,
       url: "http://127.0.0.1:8545",
     },
+    // Ethereum Sepolia testnet for live ENSv2 deployment & verification.
+    sepolia: {
+      chainId: 11155111,
+      url: process.env.SEPOLIA_RPC_URL || "https://rpc.sepolia.org",
+      accounts: process.env.OPERATOR_PRIVATE_KEY ? [process.env.OPERATOR_PRIVATE_KEY] : [],
+    },
   },
 };
 

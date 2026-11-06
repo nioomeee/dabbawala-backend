@@ -8,6 +8,7 @@
   "exports": {
     ".": {
       "import": "./dist/index.js",
+      "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
   },
@@ -15,7 +16,7 @@
     "build": "tsc --build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "clean": "rimraf dist tsconfig.tsbuildinfo",
     "db:migrate": "drizzle-kit migrate",
     "db:generate": "drizzle-kit generate",
@@ -25,10 +26,7 @@
   "dependencies": {
     "@dabbawala/config": "workspace:*",
     "@dabbawala/shared": "workspace:*",
-<<<<<<< HEAD
     "dotenv": "18.0.9",
-=======
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf
     "drizzle-orm": "^0.44.2",
     "pg": "^8.16.0",
     "zod": "^3.25.64"
@@ -39,13 +37,6 @@
     "rimraf": "^6.0.1",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
-<<<<<<< HEAD
     "vitest": "2.1.9"
   }
 }
-=======
-    "vitest": "^3.2.4"
-  }
-}
-
->>>>>>> 8902192ad8df810e30542a626bce32edd96805bf

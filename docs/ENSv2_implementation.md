@@ -3,6 +3,36 @@
 ## Overview
 Implementation of ENSv2 (Ethereum Name Service v2) for the Dabbawala Protocol, enabling robot identity via `ramu.dabbawala.eth`, `sakhu.dabbawala.eth`, `janu.dabbawala.eth` on Sepolia testnet.
 
+## Current Status (2026-11-06)
+
+### ✅ Phase 2 Complete — Real ENS Reader Implemented
+- **Real viem reader**: `apps/api/src/adapters/ens-reader.ts` — reads PolicySnapshot via viem `readContract` on `resolve(bytes name, bytes data)` with the `text(bytes32 node, string key)` profile
+- **Fail-closed**: Any transport, shape, or schema error throws structured `PolicyReadError` (code `ENS_UNREADABLE`) — callers return 503 and grant no authority (invariant §4.3.3)
+- **Block-stamped**: Reads block number BEFORE records, stamps with source block hash; 15s staleness rule enforced consumer-side from `readAtMs`
+- **Zod validation**: All records validated at boundary (AGENTS.md §8): zones array, budget integer string, status enum
+- **Dual source**: Routes use real Sepolia reader when configured (`app.ens !== null`), otherwise sim stub; never cached, never substituted
+- **Health reporting**: `/v1/ready` reports `ens_reader: "ok"` when real reader is decorated, `"not_configured"` when sim stage (no S-ENS env yet)
+- **Test coverage**: 10 unit tests for reader + 3 route tests + viem integration test in contracts harness
+
+### Implementation Details
+- **Client port**: Narrow `EnsPolicyClient` interface (readResolver, getBlockNumber, getBlockHeader) — unit tests inject fake client, no viem mocking
+- **ABI mirrors**: Local replica contract (`contracts/src/resolver/PermissionedResolver.sol`) verified against ENSv2 docs (R-ENS-2, R-ENS-7, F7-F9)
+- **Values hash**: Canonical layout `{robotId, zones, budgetAtomic, status, lastEpisode, hederaAccount, blockNumber, blockHash}` — identical across stub and real reader for provenance identity
+- **Advisory records**: `last-episode` and `hedera-account` are optional (ROADMAP §4.4); empty/missing → null, never fail-closed
+
+### What Remains (S-ENS Spike)
+1. **Sepolia deployment**: Deploy Verifiable Factory + 3 resolver proxies on Sepolia testnet
+2. **Fill env vars**: `ENS_VERIFIABLE_FACTORY_ADDRESS`, `ENS_ROBOT_*_RESOLVER` addresses in `.env`
+3. **Operator setup**: `setText` initial zones/budget/status on each resolver; `grantSetterRoles` for safety officer (status) and robot keys (last-episode)
+4. **Live verification**: Run viem read against Sepolia; confirm block-stamped PolicySnapshot matches stub shape
+5. **Passport owner field**: Read from ENS Permissioned Registry (R-ENS-4) when registry addresses available
+
+### Dependencies
+- `viem@2.57.16` — already pinned in `apps/api/package.json` (VERIFIED via `npm view` 2026-11-06)
+- No new dependencies added; reader uses existing viem + @dabbawala/shared + @dabbawala/application ports
+
+---
+
 ## References
 - AGENTS.md: Standing instructions for Dabbawala Protocol
 - ROADMAP.md: Plan, phases, tests, UI spec

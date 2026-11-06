@@ -1,0 +1,39 @@
+{
+  "name": "@dabbawala/zero-g-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "0G sponsor adapter: IFleetBrain implementation over the 0G Compute Router (OpenAI-compatible, verify_tee) and an episode-evidence uploader over 0G Storage. Proposal-only: never approves an action.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "live:compute": "node dist/cli/live-compute-check.js",
+    "live:storage": "node dist/cli/live-storage-check.js"
+  },
+  "dependencies": {
+    "@0gfoundation/0g-storage-ts-sdk": "1.2.13",
+    "@dabbawala/application": "workspace:*",
+    "@dabbawala/shared": "workspace:*",
+    "ethers": "6.13.1",
+    "zod": "^3.25.64"
+  },
+  "devDependencies": {
+    "@dabbawala/domain": "workspace:*",
+    "@dabbawala/policy-engine": "workspace:*",
+    "@types/node": "^22.15.29",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.8.3",
+    "vitest": "2.1.9"
+  }
+}
