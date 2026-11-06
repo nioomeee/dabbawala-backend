@@ -18,6 +18,7 @@
  */
 
 import type { FastifyPluginAsync } from "fastify";
+import { randomUUID } from "node:crypto";
 import { StateSummarySchema } from "@dabbawala/shared";
 import { validateAction } from "@dabbawala/policy-engine";
 import { readPolicySnapshotStub } from "../../../adapters/ens-stub.js";
@@ -38,16 +39,32 @@ export const missionDecideRoutes: FastifyPluginAsync = async (app) => {
             type: "object",
             properties: {
               source: { type: "string" },
-              action: { type: "object" },
+              action: {
+                type: "object",
+                additionalProperties: true,
+                properties: {
+                  type: { type: "string" },
+                  routeId: { type: "string" },
+                },
+              },
               requestId: { type: "string" },
               halted: { type: "boolean" },
               reason: { type: "string" },
               detail: { type: "string" },
               policyApproved: { type: "boolean" },
-              policyHalt: { type: "object", nullable: true },
+              policyHalt: {
+                type: "object",
+                nullable: true,
+                additionalProperties: true,
+                properties: {
+                  halted: { type: "boolean" },
+                  reason: { type: "string" },
+                  detail: { type: "string" },
+                },
+              },
               policyBlock: { type: "string" },
               policyHash: { type: "string" },
-              provenance: { type: "object" },
+              provenance: { type: "object", additionalProperties: true },
             },
           },
           400: { type: "object", properties: { error: { type: "string" } } },
@@ -74,14 +91,35 @@ export const missionDecideRoutes: FastifyPluginAsync = async (app) => {
         return reply.status(503).send({ error: "ENS_UNREADABLE" });
       }
 
-      // 2. Check 0G runtime configuration
+      // 2. Budget exhaustion pre-check — fail before calling 0G (saves cost).
+      //    remainingBudgetAtomic "0" means the robot has no approved budget left.
+      const remainingBudget = BigInt(state.remainingBudgetAtomic ?? "0");
+      if (remainingBudget <= 0n) {
+        log.warn({ robotId: state.robotId }, "mission decide — budget exhausted");
+        return reply.send({
+          source: "live" as const,
+          action: { type: "continue" },
+          requestId: randomUUID(),
+          policyApproved: false,
+          policyHalt: {
+            halted: true,
+            reason: "BUDGET_EXHAUSTED",
+            detail: `Robot ${state.robotId} has no remaining budget (remainingBudgetAtomic=${state.remainingBudgetAtomic})`,
+          },
+          policyBlock: policy.block.toString(),
+          policyHash: policy.valuesHash,
+          provenance: null,
+        });
+      }
+
+      // 3. Check 0G runtime configuration
       const rt = app.zeroG;
       if (rt === null) {
         log.warn({ robotId: state.robotId }, "mission decide — 0G runtime not configured");
         return reply.status(503).send({ error: "ZERO_G_UNCONFIGURED" });
       }
 
-      // 3. Get decision from Fleet Brain with provenance
+      // 4. Get decision from Fleet Brain with provenance
       try {
         const { result, provenance } = await rt.brain.decideWithProvenance(state);
         const source: "sim" | "live" = provenance.mode === "MOCK" ? "sim" : "live";

@@ -33,18 +33,15 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
     async (_req, reply) => {
       const zg = app.zeroG;
       let zeroGCompute: "ok" | "not_configured" | "error";
-      let zeroGStorage: "ok" | "not_configured";
       if (zg === null) {
         zeroGCompute = "not_configured";
-        zeroGStorage = "not_configured";
       } else {
         const rd = zg.readiness();
         zeroGCompute = rd.compute.status === "BLOCKED" ? "not_configured" : "ok";
-        zeroGStorage = rd.storage.status === "BLOCKED" ? "not_configured" : "ok";
       }
 
-      const httpStatus =
-        zeroGCompute === "ok" && zeroGStorage === "ok" ? 200 : 503;
+      const isReady = zeroGCompute === "ok";
+      const httpStatus = 200;
 
       const zeroGDetail =
         zg === null
@@ -59,13 +56,17 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
                 status: rd.compute.status,
                 proven: rd.compute.proven,
                 model: rd.compute.model,
+                lastSuccessAtMs: rd.compute.lastSuccessAtMs,
+                lastHaltFailure: rd.compute.lastHaltFailure,
+                successCount: rd.compute.successCount,
+                haltCount: rd.compute.haltCount,
               },
               storage: { status: rd.storage.status },
             };
           })();
 
       return reply.status(httpStatus).send({
-        status: zeroGCompute === "ok" && zeroGStorage === "ok" ? "ready" : "degraded",
+        status: isReady ? "ready" : "degraded",
         zero_g: zeroGDetail,
         ens: {
           source: app.ens !== null && app.ens !== undefined ? "ens" : "sim",

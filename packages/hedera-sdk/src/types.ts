@@ -14,6 +14,32 @@ import { z } from "zod";
 /** Hedera testnet USDC token ID (F12: 0.0.6001, 6 decimals) */
 export const HEDERA_TESTNET_USDC = "0.0.6001" as const;
 
+// ── Denomination Constants & Conversion (Hedera tinybars) ──────────────────────
+/** 1 HBAR = 100,000,000 tinybars (10^8) */
+export const TINYBARS_PER_HBAR = 100_000_000n;
+
+/**
+ * Convert human-readable HBAR amount to atomic tinybars string.
+ * Example: "0.001" -> "100000" tinybars
+ */
+export function hbarToTinybars(hbar: number | string): string {
+  const num = typeof hbar === "string" ? parseFloat(hbar) : hbar;
+  return Math.round(num * 100_000_000).toString();
+}
+
+/**
+ * Convert atomic tinybars string to human-readable HBAR string.
+ * Example: "100000" -> "0.001" HBAR
+ */
+export function tinybarsToHbar(tinybars: string | bigint | number): string {
+  const tb = BigInt(tinybars);
+  const whole = tb / TINYBARS_PER_HBAR;
+  const rem = tb % TINYBARS_PER_HBAR;
+  if (rem === 0n) return whole.toString();
+  const remStr = rem.toString().padStart(8, "0").replace(/0+$/, "");
+  return `${whole}.${remStr}`;
+}
+
 // ── x402 Exact-Scheme (per R-HE-4) ────────────────────────────────────────────
 
 /**
