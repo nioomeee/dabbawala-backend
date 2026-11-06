@@ -31,13 +31,12 @@
     "ci:all": "pnpm lint && pnpm typecheck && pnpm test:all && pnpm forge:test"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.33.1",
-    "@typescript-eslint/parser": "^8.33.1",
-    "eslint": "^9.28.0",
+    "@typescript-eslint/eslint-plugin": "8.6.0",
+    "@typescript-eslint/parser": "8.6.0",
+    "eslint": "9.27.0",
     "prettier": "^3.5.3",
     "rimraf": "^6.0.1",
     "turbo": "^2.5.4",
     "typescript": "^5.8.3"
   }
 }
-
