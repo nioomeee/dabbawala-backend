@@ -231,13 +231,13 @@
       }
     },
     "checkpoints": [
-      { "id": "cp-relay", "name": "Dadar Relay Handoff", "type": "relay", "coordinates": { "x": 510, "y": 590 }, "status": "pending" },
-      { "id": "cp-relay", "name": "Dadar Relay Handoff", "type": "relay", "coordinates": { "x": 510, "y": 590 }, "status": "pending" },
+      { "id": "cp-relay-ramu", "name": "Dadar Relay Handoff (Ramu)", "type": "relay", "coordinates": { "x": 510, "y": 590 }, "status": "pending" },
+      { "id": "cp-relay-sakhu", "name": "Dadar Relay Handoff (Sakhu)", "type": "relay", "coordinates": { "x": 510, "y": 590 }, "status": "pending" },
       { "id": "cp-deliver", "name": "Colaba Gate 4 Drop", "type": "delivery", "coordinates": { "x": 630, "y": 840 }, "status": "pending" }
     ],
     "steps": [
       {
-        "checkpointId": "cp-relay",
+        "checkpointId": "cp-relay-ramu",
         "action": { "type": "handoff" },
         "expectedProofs": [
           { "id": "TC-03-ramu-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
@@ -248,7 +248,7 @@
         ]
       },
       {
-        "checkpointId": "cp-relay",
+        "checkpointId": "cp-relay-sakhu",
         "action": { "type": "handoff" },
         "expectedProofs": [
           { "id": "TC-03-sakhu-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },

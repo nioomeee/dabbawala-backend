@@ -27,6 +27,7 @@
     "@dabbawala/observability": "workspace:*",
     "@dabbawala/policy-engine": "workspace:*",
     "@dabbawala/shared": "workspace:*",
+    "@dabbawala/spend-controller": "workspace:*",
     "@dabbawala/zero-g-adapter": "workspace:*",
     "@fastify/cors": "^10.0.2",
     "@fastify/sensible": "^6.0.2",

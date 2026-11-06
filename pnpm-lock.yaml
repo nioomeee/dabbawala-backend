@@ -59,6 +59,9 @@ importers:
       '@dabbawala/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@dabbawala/spend-controller':
+        specifier: workspace:*
+        version: link:../../packages/spend-controller
       '@dabbawala/zero-g-adapter':
         specifier: workspace:*
         version: link:../../packages/zero-g-adapter
@@ -298,6 +301,43 @@ importers:
       rimraf:
         specifier: ^6.0.1
         version: 6.0.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+      vitest:
+        specifier: 2.1.9
+        version: 2.1.9(@types/node@22.15.29)
+
+  packages/spend-controller:
+    dependencies:
+      '@dabbawala/application':
+        specifier: workspace:*
+        version: link:../application
+      '@dabbawala/config':
+        specifier: workspace:*
+        version: link:../config
+      '@dabbawala/hedera-sdk':
+        specifier: workspace:*
+        version: link:../hedera-sdk
+      '@dabbawala/observability':
+        specifier: workspace:*
+        version: link:../observability
+      '@dabbawala/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@hashgraph/sdk':
+        specifier: ^2.41.0
+        version: 2.41.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.29
+        version: 22.15.29
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+      tsx:
+        specifier: ^4.19.4
+        version: 4.23.15
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
