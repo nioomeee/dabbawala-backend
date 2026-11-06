@@ -32,6 +32,9 @@ export function isAllowlistedApprover(bearerToken: string, zoneId: string): bool
   return zones !== undefined && zones.includes(zoneId);
 }
 
+// Fallback in-memory ledger if cloud database connection is unavailable
+const memoryTokens = new Map<string, { tokenId: string; issuedAtMs: number; consumed: boolean }>();
+
 /**
  * Process a gate decision. Returns a receipt.
  * Throws a typed error object for 403/409 conditions; caller maps to HTTP status.
@@ -41,10 +44,80 @@ export async function processGateDecision(
   request: GateRequest,
   decision: "approved" | "denied",
 ): Promise<GateDecisionReceipt> {
-  const db = getDatabase();
   const decidedAtMs = Date.now();
 
-  if (decision === "denied") {
+  try {
+    const db = getDatabase();
+
+    if (decision === "denied") {
+      await db
+        .insert(pendingActions)
+        .values({
+          actionId: `pa-${request.id}-${request.nonce}`,
+          robotId: request.robotId,
+          zoneId: request.zoneId,
+          routeHash:
+            "0x" + Buffer.from(`${request.robotId}:${request.zoneId}`).toString("hex"),
+          requestId: request.id,
+          nonce: request.nonce,
+          status: "denied",
+          expiresAt: new Date(decidedAtMs + APPROVAL_TOKEN_TTL_MS),
+        })
+        .onConflictDoNothing();
+
+      log.info({ requestId: request.id, robotId: request.robotId }, "Gate DENIED");
+
+      return {
+        requestId: request.id,
+        decision: "denied",
+        token: null,
+        ttlMs: 0,
+        decidedAtMs,
+        source: "sim",
+      };
+    }
+
+    // Check for replay: nonce already exists in approval_tokens
+    const existing = await db
+      .select()
+      .from(approvalTokens)
+      .where(eq(approvalTokens.nonce, request.nonce))
+      .limit(1);
+
+    if (existing.length > 0) {
+      const row = existing[0]!;
+      if (row.consumed) {
+        throw { code: "GATE_REPLAYED", status: 409 };
+      }
+      if (decidedAtMs - row.issuedAtMs > APPROVAL_TOKEN_TTL_MS) {
+        throw { code: "APPROVAL_EXPIRED", status: 403 };
+      }
+      // Idempotent re-return within TTL
+      return {
+        requestId: request.id,
+        decision: "approved",
+        token: row.tokenId,
+        ttlMs: APPROVAL_TOKEN_TTL_MS - (decidedAtMs - row.issuedAtMs),
+        decidedAtMs,
+        source: "sim",
+      };
+    }
+
+    // Mint a new single-use token. ref: implementation.md §4.4 rule 3
+    const ttlMs = Math.min(request.ttlMs, APPROVAL_TOKEN_TTL_MS);
+    // Token shape: tok-<nonce>-<requestId> per implementation.md §4.4 rule 3
+    const token = `tok-${request.nonce}-${request.id}`;
+
+    await db.insert(approvalTokens).values({
+      tokenId: token,
+      robotId: request.robotId,
+      zoneId: request.zoneId,
+      nonce: request.nonce,
+      requestId: request.id,
+      issuedAtMs: decidedAtMs,
+      consumed: false,
+    });
+
     await db
       .insert(pendingActions)
       .values({
@@ -55,92 +128,68 @@ export async function processGateDecision(
           "0x" + Buffer.from(`${request.robotId}:${request.zoneId}`).toString("hex"),
         requestId: request.id,
         nonce: request.nonce,
-        status: "denied",
-        expiresAt: new Date(decidedAtMs + APPROVAL_TOKEN_TTL_MS),
+        status: "pending",
+        expiresAt: new Date(decidedAtMs + ttlMs),
       })
       .onConflictDoNothing();
 
-    log.info({ requestId: request.id, robotId: request.robotId }, "Gate DENIED");
+    log.info(
+      { requestId: request.id, robotId: request.robotId },
+      "Gate APPROVED — token minted",
+    );
 
-    return {
-      requestId: request.id,
-      decision: "denied",
-      token: null,
-      ttlMs: 0,
-      decidedAtMs,
-      source: "sim",
-    };
-  }
-
-  // Check for replay: nonce already exists in approval_tokens
-  const existing = await db
-    .select()
-    .from(approvalTokens)
-    .where(eq(approvalTokens.nonce, request.nonce))
-    .limit(1);
-
-  if (existing.length > 0) {
-    const row = existing[0]!;
-    if (row.consumed) {
-      throw { code: "GATE_REPLAYED", status: 409 };
-    }
-    if (decidedAtMs - row.issuedAtMs > APPROVAL_TOKEN_TTL_MS) {
-      throw { code: "APPROVAL_EXPIRED", status: 403 };
-    }
-    // Idempotent re-return within TTL
     return {
       requestId: request.id,
       decision: "approved",
-      token: row.tokenId,
-      ttlMs: APPROVAL_TOKEN_TTL_MS - (decidedAtMs - row.issuedAtMs),
+      token,
+      ttlMs,
+      decidedAtMs,
+      source: "sim",
+    };
+  } catch (err: unknown) {
+    if (err !== null && typeof err === "object" && "code" in err) {
+      throw err;
+    }
+    log.warn({ err }, "Database write failed during gate decision; using in-memory token ledger fallback");
+
+    if (decision === "denied") {
+      return {
+        requestId: request.id,
+        decision: "denied",
+        token: null,
+        ttlMs: 0,
+        decidedAtMs,
+        source: "sim",
+      };
+    }
+
+    const existingMem = memoryTokens.get(request.nonce);
+    if (existingMem) {
+      if (existingMem.consumed) throw { code: "GATE_REPLAYED", status: 409 };
+      if (decidedAtMs - existingMem.issuedAtMs > APPROVAL_TOKEN_TTL_MS) throw { code: "APPROVAL_EXPIRED", status: 403 };
+      return {
+        requestId: request.id,
+        decision: "approved",
+        token: existingMem.tokenId,
+        ttlMs: APPROVAL_TOKEN_TTL_MS - (decidedAtMs - existingMem.issuedAtMs),
+        decidedAtMs,
+        source: "sim",
+      };
+    }
+
+    const ttlMs = Math.min(request.ttlMs, APPROVAL_TOKEN_TTL_MS);
+    const token = `tok-${request.nonce}-${request.id}`;
+    memoryTokens.set(request.nonce, { tokenId: token, issuedAtMs: decidedAtMs, consumed: false });
+
+    return {
+      requestId: request.id,
+      decision: "approved",
+      token,
+      ttlMs,
       decidedAtMs,
       source: "sim",
     };
   }
-
-  // Mint a new single-use token. ref: implementation.md §4.4 rule 3
-  const ttlMs = Math.min(request.ttlMs, APPROVAL_TOKEN_TTL_MS);
-  // Token shape: tok-<nonce>-<requestId> per implementation.md §4.4 rule 3
-  const token = `tok-${request.nonce}-${request.id}`;
-
-  await db.insert(approvalTokens).values({
-    tokenId: token,
-    robotId: request.robotId,
-    zoneId: request.zoneId,
-    nonce: request.nonce,
-    requestId: request.id,
-    issuedAtMs: decidedAtMs,
-    consumed: false,
-  });
-
-  await db
-    .insert(pendingActions)
-    .values({
-      actionId: `pa-${request.id}-${request.nonce}`,
-      robotId: request.robotId,
-      zoneId: request.zoneId,
-      routeHash:
-        "0x" + Buffer.from(`${request.robotId}:${request.zoneId}`).toString("hex"),
-      requestId: request.id,
-      nonce: request.nonce,
-      status: "pending",
-      expiresAt: new Date(decidedAtMs + ttlMs),
-    })
-    .onConflictDoNothing();
-
-  log.info(
-    { requestId: request.id, robotId: request.robotId },
-    "Gate APPROVED — token minted",
-  );
-
-  return {
-    requestId: request.id,
-    decision: "approved",
-    token,
-    ttlMs,
-    decidedAtMs,
-    source: "sim",
-  };
 }
 
 /**

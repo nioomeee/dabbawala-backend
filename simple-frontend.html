@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dabbawala ENSv2 Subname Registration</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem; line-height: 1.6; }
+    .endpoint { background: #f5f5f5; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+    .success { color: #27ae60; }
+    .error { color: #e74c3c; }
+    input, textarea { width: 100%; padding: 0.5rem; margin: 0.5rem 0; }
+    button { padding: 0.5rem 1rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Dabbawala ENSv2 Subname Registration</h1>
+  
+  <div class="endpoint">
+    <h3>POST /subnames</h3>
+    <p>Register a subname on Sepolia testnet.</p>
+    <label>Label: <input type="text" id="label" value="ramu" required></label>
+    <label>Owner: <input type="text" id="owner" value="0x8438A07f75ebd1aBFfd241b41c77f3DA26c36734" required></label>
+    <label>Role Bitmap (hex): <input type="text" id="roleBitmap" value="16777216" required></label>
+    <label>Expiry (seconds): <input type="number" id="expiry" value="31536000" required></label>
+    <button onclick="registerSubname()">Register Subname</button>
+    <div id="result" style="margin-top: 1rem; padding: 0.5rem; display: none;"></div>
+  </div>
+
+  <script>
+    async function registerSubname() {
+      const label = document.getElementById('label').value;
+      const owner = document.getElementById('owner').value;
+      const roleBitmap = document.getElementById('roleBitmap').value;
+      const expiry = document.getElementById('expiry').value;
+      
+      const resultDiv = document.getElementById('result');
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = 'Loading...';
+      
+      try {
+        const response = await fetch('http://localhost:3000/subnames', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            label: label,
+            owner: owner,
+            roleBitmap: BigInt(roleBitmap).toString(16),
+            expiry: parseInt(expiry)
+          })
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+          resultDiv.innerHTML = '<span class="success">Success!</span><br/>';
+          resultDiv.innerHTML += 'TX Hash: ' + data.txHash + '<br/>';
+          resultDiv.innerHTML += 'Idempotent: ' + data.idempotent + '<br/>';
+          resultDiv.innerHTML += 'Label: ' + data.label;
+        } else {
+          resultDiv.innerHTML = '<span class="error">Error: ' + (data.error || 'Unknown error') + '</span>';
+        }
+      } catch (err) {
+        resultDiv.innerHTML = '<span class="error">Error: ' + err.message + '</span>';
+      }
+    }
+  </script>
+</body>
+</html>

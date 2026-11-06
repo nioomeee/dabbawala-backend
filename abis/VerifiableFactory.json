@@ -1,0 +1,18 @@
+{
+  "constant": true,
+  "inputs": [
+    {
+      "internalType": "bytes32",
+      "name": "node",
+      "type": "bytes32"
+    }
+  ],
+  "name": "getAddress",
+  "outputs": [
+    {
+      "internalType": "address",
+      "type": "address"
+    }
+  ],
+  "stateMutability": "view",
+  "type": "function"

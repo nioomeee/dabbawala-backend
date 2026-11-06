@@ -10,9 +10,10 @@
  */
 
 import type { FastifyPluginAsync } from "fastify";
-import type { RobotId } from "@dabbawala/shared";
+import { ROBOT_ENS_NAMES, ROBOT_IDS, type RobotId } from "@dabbawala/shared";
 import { readPassportStub } from "../../../adapters/ens-stub.js";
 import { ViemEnsReader, isViemEnsReaderConfigured } from "../../../adapters/viem-ens-reader.js";
+import { getConfig } from "@dabbawala/config";
 
 export const passportRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Params: { id: string } }>(
@@ -26,26 +27,12 @@ export const passportRoutes: FastifyPluginAsync = async (app) => {
           properties: { id: { type: "string" } },
           required: ["id"],
         },
-        response: {
-          200: { type: "object" },
-          400: {
-            type: "object",
-            properties: { error: { type: "string" } },
-          },
-          503: {
-            type: "object",
-            properties: {
-              error: { type: "string" },
-              stale: { type: "boolean" },
-            },
-          },
-        },
       },
     },
     async (req, reply) => {
       const { id } = req.params;
 
-      if (!["ramu", "sakhu", "janu"].includes(id)) {
+      if (!ROBOT_IDS.includes(id as RobotId)) {
         return reply.status(400).send({ error: "UNKNOWN_ROBOT_ID" });
       }
 
@@ -55,11 +42,20 @@ export const passportRoutes: FastifyPluginAsync = async (app) => {
       if (liveReader) {
         try {
           const snapshot = await liveReader.readPolicy(robotId);
+          let resolverAddress: string | null = null;
+          try {
+            const config = getConfig();
+            const key = `ENS_ROBOT_${robotId.toUpperCase()}_RESOLVER` as keyof typeof config;
+            resolverAddress = (config[key] as string) || null;
+          } catch {
+            // ignore
+          }
+
           return reply.send({
             robotId,
-            ensName: "ramu.dabbawala.eth",
-            owner: "0x0000000000000000000000000000000000000001",
-            resolver: null,
+            ensName: ROBOT_ENS_NAMES[robotId],
+            owner: "0xd91EAC71dd09c731de841f4E520Bf189b288A3A3",
+            resolver: resolverAddress,
             zones: snapshot.zones,
             budgetMicroHbar: Number(snapshot.budgetAtomic),
             status: snapshot.status,

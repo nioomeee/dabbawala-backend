@@ -1,0 +1,39 @@
+{
+  "constant": false,
+  "inputs": [
+    {
+      "internalType": "bytes32",
+      "name": "label",
+      "type": "bytes32"
+    },
+    {
+      "internalType": "address",
+      "name": "owner",
+      "type": "address"
+    },
+    {
+      "internalType": "address",
+      "name": "registry",
+      "type": "address"
+    },
+    {
+      "internalType": "address",
+      "name": "resolver",
+      "type": "address"
+    },
+    {
+      "internalType": "bytes32",
+      "name": "roleBitmap",
+      "type": "bytes32"
+    },
+    {
+      "internalType": "uint256",
+      "name": "expiry",
+      "type": "uint256"
+    }
+  ],
+  "name": "register",
+  "outputs": [],
+  "stateMutability": "nonpayable",
+  "type": "function"
+}

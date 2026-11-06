@@ -20,12 +20,6 @@ export const gateRoutes: FastifyPluginAsync = async (app) => {
         tags: ["approvals"],
         summary: "Submit a zone-entry gate decision (approved | denied)",
         body: { type: "object" },
-        response: {
-          200: { type: "object" },
-          400: { type: "object", properties: { error: { type: "string" } } },
-          403: { type: "object", properties: { error: { type: "string" } } },
-          409: { type: "object", properties: { error: { type: "string" } } },
-        },
       },
     },
     async (req, reply) => {
