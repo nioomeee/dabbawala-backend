@@ -14,8 +14,10 @@ import {
   ROBOT_BUDGET_MICRO_HBAR,
   ROBOT_ENS_NAMES,
   ROBOT_ZONES,
+  type PolicySnapshot,
   type RobotId,
 } from "@dabbawala/shared";
+import { createHash } from "node:crypto";
 import type { RobotPassport } from "../schemas/console.js";
 import { createLogger } from "@dabbawala/observability";
 
@@ -41,23 +43,20 @@ function nextBlock(): { number: number; hash: string; scannedAtMs: number } {
  * ref: implementation.md §4.3, invariant §4.3.3
  */
 export async function readPassportStub(robotId: RobotId): Promise<RobotPassport> {
-  let status: "active" | "paused" = "active";
+  const db = getDatabase();
 
-  try {
-    const db = getDatabase();
-    const rows = await db
-      .select()
-      .from(robots)
-      .where(eq(robots.id, robotId))
-      .limit(1);
+  const rows = await db
+    .select()
+    .from(robots)
+    .where(eq(robots.id, robotId))
+    .limit(1);
 
-    if (rows.length > 0 && rows[0]?.status === "paused") {
-      status = "paused";
-    }
-  } catch (err: unknown) {
-    log.debug({ robotId, err }, "DB query skipped or failed; using deterministic seeded status");
+  if (rows.length === 0) {
+    log.error({ robotId }, "Robot not found in DB — ENS stub treating as unreadable");
+    throw new Error(`ENS_UNREADABLE: robot ${robotId} not found`);
   }
 
+  const row = rows[0]!;
   const block = nextBlock();
 
   const passport: RobotPassport = {
@@ -67,7 +66,7 @@ export async function readPassportStub(robotId: RobotId): Promise<RobotPassport>
     resolver: null,
     zones: [...ROBOT_ZONES[robotId]],
     budgetMicroHbar: ROBOT_BUDGET_MICRO_HBAR[robotId],
-    status,
+    status: row.status === "paused" ? "paused" : "active",
     lastEpisode: null,
     block,
     source: "sim",
@@ -75,4 +74,56 @@ export async function readPassportStub(robotId: RobotId): Promise<RobotPassport>
 
   log.debug({ robotId, block: block.number }, "ENS stub passport issued");
   return passport;
+}
+
+/**
+ * Read a block-stamped PolicySnapshot for a robot (Hardhat/stub stage).
+ *
+ * Zones and status come from the seeded configuration / robots row; the budget
+ * is expressed in atomic units (integer string). OQ-1 (implementation.md §4.3):
+ * microHbar sim values are kept as-is pending the unit freeze, so
+ * `budgetAtomic` equals the microHbar number as a string for the stub.
+ *
+ * Throws on any DB error so callers can return 503 ENS_UNREADABLE.
+ * ref: application/ports/policy-reader.port.ts, invariant §4.3.3
+ */
+export async function readPolicySnapshotStub(robotId: RobotId): Promise<PolicySnapshot> {
+  const db = getDatabase();
+
+  const rows = await db
+    .select()
+    .from(robots)
+    .where(eq(robots.id, robotId))
+    .limit(1);
+
+  if (rows.length === 0) {
+    log.error({ robotId }, "Robot not found in DB — ENS stub treating as unreadable");
+    throw new Error(`ENS_UNREADABLE: robot ${robotId} not found`);
+  }
+
+  const row = rows[0]!;
+  const blockEntry = nextBlock();
+
+  // OQ-1 (implementation.md §4.3): microHbar sim budget and 6-decimal atomic
+  // budget share the same integer-string scale for the stub, so the seeded
+  // 5000 value is used verbatim; the conversion constant is centralised in
+  // @dabbawala/shared until the ENS budget field is frozen.
+  const budgetAtomic = String(ROBOT_BUDGET_MICRO_HBAR[robotId]);
+  const zones = [...ROBOT_ZONES[robotId]];
+  const status = row.status === "paused" ? ("paused" as const) : ("active" as const);
+
+  const valuesSource = JSON.stringify({
+    robotId,
+    zones,
+    budgetAtomic,
+    status,
+    blockNumber: blockEntry.number,
+    blockHash: blockEntry.hash,
+  });
+  const valuesHash = createHash("sha256").update(valuesSource, "utf8").digest("hex");
+  const block = BigInt(blockEntry.number);
+  const readAtMs = blockEntry.scannedAtMs;
+
+  log.debug({ robotId, block: blockEntry.number }, "ENS stub policy snapshot issued");
+  return { robotId, zones, budgetAtomic, status, block, valuesHash, readAtMs };
 }

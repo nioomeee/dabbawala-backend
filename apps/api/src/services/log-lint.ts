@@ -23,28 +23,6 @@ const SECRET_PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
   { name: "api-key-header", re: /api[_-]?key\s*[:=]\s*\S+/i },
 ];
 
-/**
- * Legitimate hash keys whose 0x-64-hex values are hashes/identifiers, not private keys.
- * ref: AI-03 README §Integration notes 5, user prompt §7
- */
-const LEGITIMATE_HASH_PROPERTIES = new Set([
-  "rootHash",
-  "txHash",
-  "txId",
-  "policyHash",
-  "valuesHash",
-  "contentSha256",
-  "requestSha256",
-  "responseContentSha256",
-  "expectedRootHash",
-  "routeHash",
-]);
-
-const HASH_KEY_REGEX = new RegExp(
-  `"(${Array.from(LEGITIMATE_HASH_PROPERTIES).join("|")})":\\s*"0x[0-9a-fA-F]{64}"`,
-  "g"
-);
-
 export type LintResult =
   | { ok: true }
   | { ok: false; violations: Array<{ pattern: string; excerpt: string }> };
@@ -52,12 +30,8 @@ export type LintResult =
 export function lintEpisodeLog(content: string): LintResult {
   const violations: Array<{ pattern: string; excerpt: string }> = [];
 
-  // Exclude legitimate hashes from private-key-hex inspection
-  const contentForHexCheck = content.replace(HASH_KEY_REGEX, '"$1":"0x[LEGITIMATE_HASH]"');
-
   for (const { name, re } of SECRET_PATTERNS) {
-    const target = name === "private-key-hex" ? contentForHexCheck : content;
-    const match = re.exec(target);
+    const match = re.exec(content);
     if (match) {
       const excerpt = match[0].slice(0, 8) + "…[REDACTED]";
       violations.push({ pattern: name, excerpt });

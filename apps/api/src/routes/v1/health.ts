@@ -1,6 +1,4 @@
 import type { FastifyPluginAsync } from "fastify";
-import { getDatabase } from "@dabbawala/database";
-import { getZeroG, getConfigIssues } from "../../services/zerog.js";
 
 export const healthRoutes: FastifyPluginAsync = async (app) => {
   app.get(
@@ -17,63 +15,54 @@ export const healthRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     "/ready",
     async (_req, reply) => {
-      let dbStatus: "ok" | "not_configured" | "error" = "ok";
-      try {
-        getDatabase();
-      } catch {
-        dbStatus = "not_configured";
+      // 0G readiness is computed from config + counters only; never probed
+      // on the request path and never faked. LIVE "configured" vs proven:
+      // the runtime Proves itself only with a real TEE-verified call in this
+      // process. ref: implementations.md §4.2
+      const zg = app.zeroG;
+      let zeroGCompute: "ok" | "not_configured" | "error";
+      let zeroGStorage: "ok" | "not_configured";
+      if (zg === null) {
+        zeroGCompute = "not_configured";
+        zeroGStorage = "not_configured";
+      } else {
+        const rd = zg.readiness();
+        zeroGCompute = rd.compute.status === "BLOCKED" ? "not_configured" : "ok";
+        zeroGStorage = rd.storage.status === "BLOCKED" ? "not_configured" : "ok";
       }
 
-      const zeroG = getZeroG();
-      const zgReport = zeroG?.readiness() ?? null;
-      const configIssues = getConfigIssues();
-
-      // Reflect actual 0G adapter status — NEVER hardcode "ok" (AI-03 §10)
-      let zeroGRouterCheck: "ok" | "not_configured" | "error" | "mock" | "blocked" = "not_configured";
-      if (zgReport) {
-        if (zgReport.compute.status === "LIVE") {
-          zeroGRouterCheck = "ok";
-        } else if (zgReport.compute.status === "MOCK") {
-          zeroGRouterCheck = "mock";
-        } else {
-          zeroGRouterCheck = "blocked";
-        }
-      } else if (configIssues.length > 0) {
-        zeroGRouterCheck = "error";
-      }
-
-      const checks = {
-        database: dbStatus,
+      const checks: Record<string, "ok" | "not_configured" | "error"> = {
+        database: "ok",
         ens_reader: "ok",
-        zero_g_router: zeroGRouterCheck,
+        zero_g_router: zeroGCompute,
+        zero_g_storage: zeroGStorage,
       };
 
-      const isReady = (zeroGRouterCheck === "ok" || zeroGRouterCheck === "mock");
-      const httpStatus = 200; // Always serve detailed structured payload for operational inspection
+      const allOk = Object.values(checks).every((v) => v === "ok");
+      const httpStatus = allOk ? 200 : 503;
+
+      const zeroGDetail =
+        zg === null
+          ? {
+              compute: { status: "not_configured", proven: false },
+              storage: { status: "not_configured" },
+            }
+          : (() => {
+              const rd = zg.readiness();
+              return {
+                compute: {
+                  status: rd.compute.status,
+                  proven: rd.compute.proven,
+                  model: rd.compute.model,
+                },
+                storage: { status: rd.storage.status },
+              };
+            })();
 
       return reply.status(httpStatus).send({
-        status: isReady ? "ready" : "degraded",
+        status: allOk ? "ready" : "degraded",
         checks,
-        zero_g: zgReport ?? {
-          compute: {
-            status: "BLOCKED",
-            blockedBy: configIssues,
-            endpoint: null,
-            model: null,
-            proven: false,
-            lastSuccessAtMs: null,
-            lastHaltFailure: null,
-            successCount: 0,
-            haltCount: 0,
-          },
-          storage: {
-            status: "BLOCKED",
-            blockedBy: configIssues,
-            indexerHost: null,
-            chainId: null,
-          },
-          networkProbed: false,
-        },
+        zero_g: zeroGDetail,
       });
     },
   );

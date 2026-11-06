@@ -29,7 +29,7 @@ export const episodeRoutes: FastifyPluginAsync = async (app) => {
           required: ["scenarioId"],
         },
         response: {
-          200: { type: "object", additionalProperties: true },
+          200: { type: "object" },
           404: { type: "object", properties: { error: { type: "string" } } },
           422: { type: "object", properties: { error: { type: "string" } } },
         },

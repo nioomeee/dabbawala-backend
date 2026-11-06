@@ -8,32 +8,60 @@
 
 import Fastify from "fastify";
 import { createLogger } from "@dabbawala/observability";
-import { initDatabase, closeDatabase } from "@dabbawala/database";
+import { initDatabase } from "@dabbawala/database";
 import { loadConfig } from "@dabbawala/config";
+import { createZeroGRuntime } from "@dabbawala/zero-g-adapter";
+import "./fastify-augmentation.js";
 import { healthRoutes } from "./routes/v1/health.js";
 import { scenarioRoutes } from "./routes/v1/console/scenarios.js";
 import { passportRoutes } from "./routes/v1/robots/passport.js";
 import { gateRoutes } from "./routes/v1/gate/decide.js";
 import { episodeRoutes } from "./routes/v1/episodes/log.js";
-import { missionRoutes } from "./routes/v1/mission/decision.js";
-import { evidenceRoutes } from "./routes/v1/evidence/storage.js";
-import { initZeroG, closeZeroG } from "./services/zerog.js";
+import { internalDecideRoutes } from "./routes/v1/internal/decide.js";
 
 const log = createLogger("api");
+
+// Pino-compatible port for the adapter's structured logs. Secrets never reach
+// this object (adapter redacts; keys live only inside the fetch closure).
+const zeroGLogger = {
+  info: (obj: Record<string, unknown>, msg: string): void => log.info(obj, msg),
+  warn: (obj: Record<string, unknown>, msg: string): void => log.warn(obj, msg),
+  error: (obj: Record<string, unknown>, msg: string): void => log.error(obj, msg),
+};
+
+/**
+ * Build the 0G runtime once. Explicit LIVE / MOCK / BLOCKED per capability
+ * (implementations.md §2; ref/zero-g-adapter README):
+ *   - malformed config -> decorator is null; decide endpoints fail closed and
+ *     /ready reports not_configured;
+ *   - no extraLint is injected: the adapter's built-in key-aware evidence lint
+ *     already supersedes the AI-01 regex lint and combining them would reject
+ *     legitimate rootHash/txHash values (impl note in REFERENCE package README).
+ */
+function buildZeroGRuntime() {
+  const rt = createZeroGRuntime(process.env, { logger: zeroGLogger });
+  if (!rt.ok) {
+    // Env var names and problems only; never the offending values.
+    log.error({ issues: rt.error }, "0G adapter config invalid — 0G capabilities fail closed");
+    return null;
+  }
+  const ready = rt.value.readiness();
+  log.info(
+    {
+      compute: ready.compute.status,
+      storage: ready.storage.status,
+    },
+    "0G runtime assembled",
+  );
+  return rt.value;
+}
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function buildApp() {
   const config = loadConfig();
 
   // Initialise NeonDB connection. ref: implementation.md §5 DB-1
-  try {
-    initDatabase(config.DATABASE_URL);
-  } catch (err) {
-    log.warn({ err }, "Database pool initialisation deferred");
-  }
-
-  // Initialise 0G Runtime once per backend process. ref: user prompt §3
-  initZeroG(process.env);
+  initDatabase(config.DATABASE_URL);
 
   const app = Fastify({
     // Pass the pino logger instance; Fastify accepts any pino Logger.
@@ -45,6 +73,10 @@ export function buildApp() {
   });
 
   // ── Plugins ───────────────────────────────────────────────────────────────
+
+  // 0G runtime decoration (typed via fastify-augmentation.ts). Built after the
+  // Fastify instance so the decorator exists before any route resolves.
+  app.decorate("zeroG", buildZeroGRuntime());
 
   void app.register(import("@fastify/sensible"));
 
@@ -68,8 +100,7 @@ export function buildApp() {
         { name: "robots",    description: "Robot passport (stub ENS, Hardhat stage)" },
         { name: "approvals", description: "Restricted-zone approval flow" },
         { name: "episodes",  description: "Episode log and replay" },
-        { name: "mission",   description: "0G decision checkpoints and simulator state" },
-        { name: "evidence",  description: "0G Storage and provenance anchoring" },
+        { name: "internal",  description: "Internal endpoints (Fleet Brain + policy gate)" },
       ],
     },
   });
@@ -85,15 +116,7 @@ export function buildApp() {
   void app.register(passportRoutes, { prefix: "/v1" }); // API-3
   void app.register(gateRoutes,     { prefix: "/v1" }); // API-4
   void app.register(episodeRoutes,  { prefix: "/v1" }); // API-5
-  void app.register(missionRoutes,  { prefix: "/v1" }); // Mission decision & simulator
-  void app.register(evidenceRoutes, { prefix: "/v1" }); // 0G Storage & provenance
-
-  // ── Graceful shutdown lifecycle hook ──────────────────────────────────────
-  app.addHook("onClose", async () => {
-    log.info("Server shutting down — closing resources");
-    await closeZeroG();
-    await closeDatabase();
-  });
+  void app.register(internalDecideRoutes, { prefix: "/v1" }); // B-2 (0G + policy gate)
 
   // ── Error handler ─────────────────────────────────────────────────────────
 

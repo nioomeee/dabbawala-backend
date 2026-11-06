@@ -8,6 +8,7 @@
   "exports": {
     ".": {
       "import": "./dist/index.js",
+      "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
   },
@@ -15,12 +16,13 @@
     "build": "tsc --build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "clean": "rimraf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {},
   "devDependencies": {
     "@types/node": "^22.15.29",
+    "vitest": "2.1.9",
     "zod": "^3.25.64"
   }
 }

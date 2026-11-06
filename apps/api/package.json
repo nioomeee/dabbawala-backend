@@ -20,20 +20,18 @@
     "clean": "rimraf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@0gfoundation/0g-storage-ts-sdk": "1.2.13",
     "@dabbawala/application": "workspace:*",
-    "@dabbawala/policy-engine": "workspace:*",
-    "@dabbawala/zero-g-adapter": "workspace:*",
     "@dabbawala/config": "workspace:*",
     "@dabbawala/database": "workspace:*",
     "@dabbawala/domain": "workspace:*",
     "@dabbawala/observability": "workspace:*",
+    "@dabbawala/policy-engine": "workspace:*",
     "@dabbawala/shared": "workspace:*",
+    "@dabbawala/zero-g-adapter": "workspace:*",
     "@fastify/cors": "^10.0.2",
     "@fastify/sensible": "^6.0.2",
     "@fastify/swagger": "^9.5.1",
     "@fastify/swagger-ui": "^5.2.3",
-    "ethers": "6.13.1",
     "fastify": "^5.3.3",
     "viem": "2.57.16",
     "zod": "^3.25.64"

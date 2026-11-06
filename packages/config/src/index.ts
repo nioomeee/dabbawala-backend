@@ -40,10 +40,7 @@ const EnvSchema = z.object({
 
   // Database (NeonDB cloud PostgreSQL). ref: implementation.md §5 D2
   // Pooled connection string for app runtime; direct endpoint for migrations.
-  DATABASE_URL: z
-    .string()
-    .url("DATABASE_URL must be a valid PostgreSQL URL")
-    .default("postgres://dabbawala:dabbawala@127.0.0.1:5432/dabbawala_dev"),
+  DATABASE_URL: z.string().url("DATABASE_URL must be a valid PostgreSQL URL"),
 
   // Local EVM (Hardhat). ref: implementation.md §1 D3
   LOCAL_RPC_URL: z.string().url().default("http://127.0.0.1:8545"),
