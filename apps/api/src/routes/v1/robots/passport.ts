@@ -51,10 +51,14 @@ export const passportRoutes: FastifyPluginAsync = async (app) => {
             // ignore
           }
 
+          // Owner is read from ENS Permissioned Registry; not yet implemented.
+          // For now, we leave it as a placeholder indicating the source.
+          const owner = "0x...from-ENS";
+
           return reply.send({
             robotId,
             ensName: ROBOT_ENS_NAMES[robotId],
-            owner: "0xd91EAC71dd09c731de841f4E520Bf189b288A3A3",
+            owner,
             resolver: resolverAddress,
             zones: snapshot.zones,
             budgetMicroHbar: Number(snapshot.budgetAtomic),

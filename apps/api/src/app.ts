@@ -20,6 +20,7 @@ import { gateRoutes } from "./routes/v1/gate/decide.js";
 import { episodeRoutes } from "./routes/v1/episodes/log.js";
 import { internalDecideRoutes } from "./routes/v1/internal/decide.js";
 import { internalSpendRoutes } from "./routes/v1/internal/spend.js";
+import { missionDecideRoutes } from "./routes/v1/mission/decide.js";
 
 const log = createLogger("api");
 
@@ -117,6 +118,7 @@ export function buildApp() {
         { name: "approvals", description: "Restricted-zone approval flow" },
         { name: "episodes",  description: "Episode log and replay" },
         { name: "internal",  description: "Internal endpoints (Fleet Brain + policy gate)" },
+        { name: "mission",   description: "Mission decision and execution" },
       ],
     },
   });
@@ -134,6 +136,7 @@ export function buildApp() {
   void app.register(episodeRoutes,  { prefix: "/v1" }); // API-5
   void app.register(internalDecideRoutes, { prefix: "/v1" }); // B-2 (0G + policy gate)
   void app.register(internalSpendRoutes, { prefix: "/v1" }); // B-6 (Spend Controller + x402)
+  void app.register(missionDecideRoutes, { prefix: "/v1" }); // Mission decision (public API)
 
   // ── Error handler ─────────────────────────────────────────────────────────
 
