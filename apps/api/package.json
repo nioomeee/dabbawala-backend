@@ -1,0 +1,47 @@
+{
+  "name": "@dabbawala/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dabbawala Protocol HTTP API — Fastify server with health, robot status, and approval endpoints.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@0gfoundation/0g-storage-ts-sdk": "1.2.13",
+    "@dabbawala/application": "workspace:*",
+    "@dabbawala/config": "workspace:*",
+    "@dabbawala/database": "workspace:*",
+    "@dabbawala/domain": "workspace:*",
+    "@dabbawala/observability": "workspace:*",
+    "@dabbawala/shared": "workspace:*",
+    "@fastify/cors": "^10.0.2",
+    "@fastify/sensible": "^6.0.2",
+    "@fastify/swagger": "^9.5.1",
+    "@fastify/swagger-ui": "^5.2.3",
+    "ethers": "6.13.1",
+    "fastify": "^5.3.3",
+    "viem": "2.57.16",
+    "zod": "^3.25.64"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.29",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "2.1.9"
+  },
+  "type": "module"
+}

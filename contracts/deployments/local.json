@@ -1,0 +1,46 @@
+{
+  "network": "hardhat",
+  "chainId": 31337,
+  "deployedAt": "2026-11-05T18:03:23.375Z",
+  "statement": "LOCAL THROWAWAY deployment for the Hardhat harness (chain id 31337). Not a Sepolia deployment. Contracts are the local ENSv2 replica, not the protocol-owned Sepolia contracts.",
+  "factory": {
+    "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+    "implementation": "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+  },
+  "roles": {
+    "operator": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "safetyOfficer": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+  },
+  "robots": {
+    "ramu": {
+      "name": "ramu.dabbawala.eth",
+      "resolver": "0x693B9F5B74ecBa9F186Bce4c7e80fcD29B960f95",
+      "owner": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      "records": {
+        "zones": "[\"mahim\",\"dadar\",\"churchgate\"]",
+        "budget": "5000",
+        "status": "active"
+      }
+    },
+    "sakhu": {
+      "name": "sakhu.dabbawala.eth",
+      "resolver": "0xc7f18131F9989171063906DC7F9E3C5B0c1727C9",
+      "owner": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+      "records": {
+        "zones": "[\"mahim\",\"dadar\"]",
+        "budget": "5000",
+        "status": "active"
+      }
+    },
+    "janu": {
+      "name": "janu.dabbawala.eth",
+      "resolver": "0x41473BC0902C7C336760ae20eEAF171404b39b8C",
+      "owner": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+      "records": {
+        "zones": "[\"docks-r2\"]",
+        "budget": "5000",
+        "status": "active"
+      }
+    }
+  }
+}

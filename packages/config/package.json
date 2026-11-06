@@ -1,0 +1,26 @@
+{
+  "name": "@dabbawala/config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Typed environment configuration loaded from env vars. No defaults for secrets.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.15.29",
+    "zod": "^3.25.64"
+  }
+}

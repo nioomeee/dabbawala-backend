@@ -1,0 +1,843 @@
+[
+  {
+    "id": "TC-01",
+    "title": "Clean Delivery (Happy Path)",
+    "description": "Ramu reads ENS, pays 0.002 HBAR over x402, follows the 0G route to Colaba Gate 4. Sakhu and Janu run their lanes in parallel.",
+    "track": "Integration",
+    "leadRobot": "ramu",
+    "lanes": {
+      "ramu": {
+        "robotId": "ramu",
+        "role": "Primary Western Line courier",
+        "route": [
+          { "id": "k1", "x": 650, "y": 120, "label": "K1" },
+          { "id": "adh", "x": 540, "y": 140 },
+          { "id": "cp1", "x": 540, "y": 270 },
+          { "id": "bvi", "x": 510, "y": 430 },
+          { "id": "cp2", "x": 510, "y": 590 },
+          { "id": "ccg", "x": 510, "y": 750 },
+          { "id": "col", "x": 630, "y": 840 }
+        ],
+        "stepCallouts": ["🛂 ENS policy read", "⚡ Paying 0.002 HBAR", "🏁 Delivering · Colaba Gate 4"]
+      },
+      "sakhu": {
+        "robotId": "sakhu",
+        "role": "Monsoon canal detour scout",
+        "route": [
+          { "id": "k2", "x": 900, "y": 140, "label": "K2" },
+          { "id": "sak-a", "x": 800, "y": 210 },
+          { "id": "sak-b", "x": 800, "y": 420 },
+          { "id": "sak-c", "x": 740, "y": 480 },
+          { "id": "sak-d", "x": 530, "y": 600 },
+          { "id": "sak-e", "x": 530, "y": 760 },
+          { "id": "sak-f", "x": 720, "y": 840 }
+        ],
+        "stepCallouts": ["📦 Parallel manifest", "🌧 Canal scout clear", "🤝 Relay standby"]
+      },
+      "janu": {
+        "robotId": "janu",
+        "role": "Restricted Zone R-2 cargo specialist",
+        "route": [
+          { "id": "dock", "x": 1120, "y": 180, "label": "Dock Yard" },
+          { "id": "jan-a", "x": 1120, "y": 320 },
+          { "id": "cp3", "x": 880, "y": 360 },
+          { "id": "jan-b", "x": 1040, "y": 410 },
+          { "id": "jan-c", "x": 920, "y": 580 },
+          { "id": "jan-d", "x": 960, "y": 780 }
+        ],
+        "stepCallouts": ["🛰 R-2 perimeter scan", "🛑 Zone R-2 Halt Flag", "⏳ Holding at sentry"]
+      }
+    },
+    "checkpoints": [
+      { "id": "cp-ens", "name": "CP1 · Mahim ENS Gate", "type": "ens_policy", "coordinates": { "x": 540, "y": 270 }, "status": "pending" },
+      { "id": "cp-pay", "name": "CP2 · Dadar x402 Relay", "type": "hedera_payment", "coordinates": { "x": 510, "y": 590 }, "status": "pending" },
+      { "id": "cp-deliver", "name": "Colaba Gate 4 Drop", "type": "delivery", "coordinates": { "x": 630, "y": 840 }, "status": "pending" }
+    ],
+    "steps": [
+      {
+        "checkpointId": "cp-ens",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-01-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-01-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-01-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-01-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-01-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      },
+      {
+        "checkpointId": "cp-pay",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-01-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-01-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-01-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-01-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-01-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      },
+      {
+        "checkpointId": "cp-deliver",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-01-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-01-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-01-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-01-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-01-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      }
+    ],
+    "expectedOutcome": "DELIVERED"
+  },
+  {
+    "id": "TC-02",
+    "title": "Monsoon Flooded Lane Reroute",
+    "description": "SV Canal waterlogged. 0G detects the hazard at Dadar and Sakhu takes the Mahim detour while Ramu holds the main line.",
+    "track": "0G",
+    "leadRobot": "sakhu",
+    "lanes": {
+      "ramu": {
+        "robotId": "ramu",
+        "role": "Primary Western Line courier",
+        "route": [
+          { "id": "k1", "x": 650, "y": 120, "label": "K1" },
+          { "id": "adh", "x": 540, "y": 140 },
+          { "id": "cp1", "x": 540, "y": 270 },
+          { "id": "bvi", "x": 510, "y": 430 },
+          { "id": "cp2", "x": 510, "y": 590 },
+          { "id": "ccg", "x": 510, "y": 750 },
+          { "id": "col", "x": 630, "y": 840 }
+        ],
+        "stepCallouts": ["🛂 ENS policy read", "⏸ Holding at Dadar", "📦 Manifest locked"]
+      },
+      "sakhu": {
+        "robotId": "sakhu",
+        "role": "Monsoon canal detour scout",
+        "route": [
+          { "id": "k2", "x": 900, "y": 140, "label": "K2" },
+          { "id": "sak-a", "x": 800, "y": 210 },
+          { "id": "sak-b", "x": 800, "y": 420 },
+          { "id": "sak-c", "x": 740, "y": 480 },
+          { "id": "sak-d", "x": 530, "y": 600 },
+          { "id": "sak-e", "x": 530, "y": 760 },
+          { "id": "sak-f", "x": 720, "y": 840 }
+        ],
+        "stepCallouts": ["🌧 Canal flooded", "📍 0G detour · Mahim", "🏁 Reroute complete"]
+      },
+      "janu": {
+        "robotId": "janu",
+        "role": "Restricted Zone R-2 cargo specialist",
+        "route": [
+          { "id": "dock", "x": 1120, "y": 180, "label": "Dock Yard" },
+          { "id": "jan-a", "x": 1120, "y": 320 },
+          { "id": "cp3", "x": 880, "y": 360 },
+          { "id": "jan-b", "x": 1040, "y": 410 },
+          { "id": "jan-c", "x": 920, "y": 580 },
+          { "id": "jan-d", "x": 960, "y": 780 }
+        ],
+        "stepCallouts": ["🛰 R-2 perimeter scan", "🛑 Zone R-2 Halt Flag", "⏳ Holding at sentry"]
+      }
+    },
+    "checkpoints": [
+      { "id": "cp-ens", "name": "CP1 · Mahim ENS Gate", "type": "ens_policy", "coordinates": { "x": 540, "y": 270 }, "status": "pending" },
+      { "id": "cp-pay", "name": "CP2 · Dadar x402 Relay", "type": "hedera_payment", "coordinates": { "x": 510, "y": 590 }, "status": "pending" },
+      { "id": "cp-deliver", "name": "Colaba Gate 4 Drop", "type": "delivery", "coordinates": { "x": 630, "y": 840 }, "status": "pending" }
+    ],
+    "steps": [
+      {
+        "checkpointId": "cp-ens",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-02-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-02-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-02-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-02-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-02-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      },
+      {
+        "checkpointId": "cp-pay",
+        "action": { "type": "reroute", "routeId": "mahim-detour" },
+        "expectedProofs": [
+          { "id": "TC-02-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-02-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-02-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-02-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-02-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      },
+      {
+        "checkpointId": "cp-deliver",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-02-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-02-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-02-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-02-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-02-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      }
+    ],
+    "expectedOutcome": "REROUTED"
+  },
+  {
+    "id": "TC-03",
+    "title": "Three Robots Concurrent Relay",
+    "description": "Ramu hands the dabba box to Sakhu at Dadar; Sakhu transfers to Janu; all three synchronize manifests.",
+    "track": "Integration",
+    "leadRobot": "ramu",
+    "lanes": {
+      "ramu": {
+        "robotId": "ramu",
+        "role": "Primary Western Line courier",
+        "route": [
+          { "id": "k1", "x": 650, "y": 120, "label": "K1" },
+          { "id": "adh", "x": 540, "y": 140 },
+          { "id": "cp1", "x": 540, "y": 270 },
+          { "id": "bvi", "x": 510, "y": 430 },
+          { "id": "cp2", "x": 510, "y": 590 },
+          { "id": "ccg", "x": 510, "y": 750 },
+          { "id": "col", "x": 630, "y": 840 }
+        ],
+        "stepCallouts": ["📦 Approaching handoff", "⇄ Handoff → Sakhu", "✅ Manifest signed"]
+      },
+      "sakhu": {
+        "robotId": "sakhu",
+        "role": "Monsoon canal detour scout",
+        "route": [
+          { "id": "k2", "x": 900, "y": 140, "label": "K2" },
+          { "id": "sak-a", "x": 800, "y": 210 },
+          { "id": "sak-b", "x": 800, "y": 420 },
+          { "id": "sak-c", "x": 740, "y": 480 },
+          { "id": "sak-d", "x": 530, "y": 600 },
+          { "id": "sak-e", "x": 530, "y": 760 },
+          { "id": "sak-f", "x": 720, "y": 840 }
+        ],
+        "stepCallouts": ["⏳ Awaiting box", "⇄ Handoff → Janu", "✅ Manifest signed"]
+      },
+      "janu": {
+        "robotId": "janu",
+        "role": "Restricted Zone R-2 cargo specialist",
+        "route": [
+          { "id": "dock", "x": 1120, "y": 180, "label": "Dock Yard" },
+          { "id": "jan-a", "x": 1120, "y": 320 },
+          { "id": "cp3", "x": 880, "y": 360 },
+          { "id": "jan-b", "x": 1040, "y": 410 },
+          { "id": "jan-c", "x": 920, "y": 580 },
+          { "id": "jan-d", "x": 960, "y": 780 }
+        ],
+        "stepCallouts": ["⏳ Awaiting transfer", "📦 Receiving box", "✅ Manifest signed"]
+      }
+    },
+    "checkpoints": [
+      { "id": "cp-relay", "name": "Dadar Relay Handoff", "type": "relay", "coordinates": { "x": 510, "y": 590 }, "status": "pending" },
+      { "id": "cp-relay", "name": "Dadar Relay Handoff", "type": "relay", "coordinates": { "x": 510, "y": 590 }, "status": "pending" },
+      { "id": "cp-deliver", "name": "Colaba Gate 4 Drop", "type": "delivery", "coordinates": { "x": 630, "y": 840 }, "status": "pending" }
+    ],
+    "steps": [
+      {
+        "checkpointId": "cp-relay",
+        "action": { "type": "handoff" },
+        "expectedProofs": [
+          { "id": "TC-03-ramu-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-03-ramu-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-03-ramu-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-03-ramu-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-03-ramu-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      },
+      {
+        "checkpointId": "cp-relay",
+        "action": { "type": "handoff" },
+        "expectedProofs": [
+          { "id": "TC-03-sakhu-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-03-sakhu-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-03-sakhu-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-03-sakhu-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-03-sakhu-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      },
+      {
+        "checkpointId": "cp-deliver",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-03-janu-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-03-janu-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-03-janu-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-03-janu-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-03-janu-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      }
+    ],
+    "expectedOutcome": "DELIVERED"
+  },
+  {
+    "id": "TC-04",
+    "title": "Over Per-Request Cap",
+    "description": "Intel server demands 0.050 HBAR (cap 0.005). Spend Controller refuses to sign. Ramu halts safely; fleet holds.",
+    "track": "Hedera",
+    "leadRobot": "ramu",
+    "lanes": {
+      "ramu": {
+        "robotId": "ramu",
+        "role": "Primary Western Line courier",
+        "route": [
+          { "id": "k1", "x": 650, "y": 120, "label": "K1" },
+          { "id": "adh", "x": 540, "y": 140 },
+          { "id": "cp1", "x": 540, "y": 270 },
+          { "id": "bvi", "x": 510, "y": 430 },
+          { "id": "cp2", "x": 510, "y": 590 },
+          { "id": "ccg", "x": 510, "y": 750 },
+          { "id": "col", "x": 630, "y": 840 }
+        ],
+        "stepCallouts": ["🛂 ENS policy read", "🛑 Refused · OVER_CAP"]
+      },
+      "sakhu": {
+        "robotId": "sakhu",
+        "role": "Monsoon canal detour scout",
+        "route": [
+          { "id": "k2", "x": 900, "y": 140, "label": "K2" },
+          { "id": "sak-a", "x": 800, "y": 210 },
+          { "id": "sak-b", "x": 800, "y": 420 },
+          { "id": "sak-c", "x": 740, "y": 480 },
+          { "id": "sak-d", "x": 530, "y": 600 },
+          { "id": "sak-e", "x": 530, "y": 760 },
+          { "id": "sak-f", "x": 720, "y": 840 }
+        ],
+        "stepCallouts": ["📦 Parallel manifest", "⏸ Fleet hold"]
+      },
+      "janu": {
+        "robotId": "janu",
+        "role": "Restricted Zone R-2 cargo specialist",
+        "route": [
+          { "id": "dock", "x": 1120, "y": 180, "label": "Dock Yard" },
+          { "id": "jan-a", "x": 1120, "y": 320 },
+          { "id": "cp3", "x": 880, "y": 360 },
+          { "id": "jan-b", "x": 1040, "y": 410 },
+          { "id": "jan-c", "x": 920, "y": 580 },
+          { "id": "jan-d", "x": 960, "y": 780 }
+        ],
+        "stepCallouts": ["🛰 R-2 perimeter scan", "⏸ Fleet hold"]
+      }
+    },
+    "checkpoints": [
+      { "id": "cp-ens", "name": "CP1 · Mahim ENS Gate", "type": "ens_policy", "coordinates": { "x": 540, "y": 270 }, "status": "pending" },
+      { "id": "cp-pay", "name": "CP2 · Dadar x402 Relay", "type": "hedera_payment", "coordinates": { "x": 510, "y": 590 }, "status": "pending" }
+    ],
+    "steps": [
+      {
+        "checkpointId": "cp-ens",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-04-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-04-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-04-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-04-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-04-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      },
+      {
+        "checkpointId": "cp-pay",
+        "action": { "type": "halt", "reason": "OVER_CAP" },
+        "expectedProofs": [
+          { "id": "TC-04-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "failed", "hash": "0xens…" },
+          { "id": "TC-04-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "failed", "hash": "0x402…" },
+          { "id": "TC-04-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "failed", "hash": "0xgzg…" },
+          { "id": "TC-04-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "failed" },
+          { "id": "TC-04-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "failed", "hash": "0xstore…" }
+        ]
+      }
+    ],
+    "expectedOutcome": "HALTED"
+  },
+  {
+    "id": "TC-05",
+    "title": "Budget Exhausted",
+    "description": "Sakhu's ENS budget is depleted mid-transit. x402 payment refused, operator-ask event fired, robot safe-stops.",
+    "track": "Hedera",
+    "leadRobot": "sakhu",
+    "lanes": {
+      "ramu": {
+        "robotId": "ramu",
+        "role": "Primary Western Line courier",
+        "route": [
+          { "id": "k1", "x": 650, "y": 120, "label": "K1" },
+          { "id": "adh", "x": 540, "y": 140 },
+          { "id": "cp1", "x": 540, "y": 270 },
+          { "id": "bvi", "x": 510, "y": 430 },
+          { "id": "cp2", "x": 510, "y": 590 },
+          { "id": "ccg", "x": 510, "y": 750 },
+          { "id": "col", "x": 630, "y": 840 }
+        ],
+        "stepCallouts": ["🛂 ENS policy read", "⏸ Holding at Dadar"]
+      },
+      "sakhu": {
+        "robotId": "sakhu",
+        "role": "Monsoon canal detour scout",
+        "route": [
+          { "id": "k2", "x": 900, "y": 140, "label": "K2" },
+          { "id": "sak-a", "x": 800, "y": 210 },
+          { "id": "sak-b", "x": 800, "y": 420 },
+          { "id": "sak-c", "x": 740, "y": 480 },
+          { "id": "sak-d", "x": 530, "y": 600 },
+          { "id": "sak-e", "x": 530, "y": 760 },
+          { "id": "sak-f", "x": 720, "y": 840 }
+        ],
+        "stepCallouts": ["🌧 Canal approach", "🛑 BUDGET_EXHAUSTED · asking operator"]
+      },
+      "janu": {
+        "robotId": "janu",
+        "role": "Restricted Zone R-2 cargo specialist",
+        "route": [
+          { "id": "dock", "x": 1120, "y": 180, "label": "Dock Yard" },
+          { "id": "jan-a", "x": 1120, "y": 320 },
+          { "id": "cp3", "x": 880, "y": 360 },
+          { "id": "jan-b", "x": 1040, "y": 410 },
+          { "id": "jan-c", "x": 920, "y": 580 },
+          { "id": "jan-d", "x": 960, "y": 780 }
+        ],
+        "stepCallouts": ["🛰 R-2 perimeter scan", "⏸ Fleet hold"]
+      }
+    },
+    "checkpoints": [
+      { "id": "cp-ens", "name": "CP1 · Mahim ENS Gate", "type": "ens_policy", "coordinates": { "x": 540, "y": 270 }, "status": "pending" },
+      { "id": "cp-pay", "name": "CP2 · Dadar x402 Relay", "type": "hedera_payment", "coordinates": { "x": 510, "y": 590 }, "status": "pending" }
+    ],
+    "steps": [
+      {
+        "checkpointId": "cp-ens",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-05-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-05-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-05-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-05-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-05-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      },
+      {
+        "checkpointId": "cp-pay",
+        "action": { "type": "ask_human", "zoneId": "budget-ops" },
+        "expectedProofs": [
+          { "id": "TC-05-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "failed", "hash": "0xens…" },
+          { "id": "TC-05-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "failed", "hash": "0x402…" },
+          { "id": "TC-05-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "failed", "hash": "0xgzg…" },
+          { "id": "TC-05-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "failed" },
+          { "id": "TC-05-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "failed", "hash": "0xstore…" }
+        ]
+      }
+    ],
+    "expectedOutcome": "HALTED"
+  },
+  {
+    "id": "TC-08",
+    "title": "Safety Officer Halts One Robot",
+    "description": "Safety officer sets `status=paused` on Janu's ENS record. Janu halts with POLICY_PAUSED; Ramu and Sakhu continue unaffected.",
+    "track": "ENS",
+    "leadRobot": "ramu",
+    "lanes": {
+      "ramu": {
+        "robotId": "ramu",
+        "role": "Primary Western Line courier",
+        "route": [
+          { "id": "k1", "x": 650, "y": 120, "label": "K1" },
+          { "id": "adh", "x": 540, "y": 140 },
+          { "id": "cp1", "x": 540, "y": 270 },
+          { "id": "bvi", "x": 510, "y": 430 },
+          { "id": "cp2", "x": 510, "y": 590 },
+          { "id": "ccg", "x": 510, "y": 750 },
+          { "id": "col", "x": 630, "y": 840 }
+        ],
+        "stepCallouts": ["🛂 ENS policy read", "⚡ Paying 0.002 HBAR", "✅ Delivery unaffected"]
+      },
+      "sakhu": {
+        "robotId": "sakhu",
+        "role": "Monsoon canal detour scout",
+        "route": [
+          { "id": "k2", "x": 900, "y": 140, "label": "K2" },
+          { "id": "sak-a", "x": 800, "y": 210 },
+          { "id": "sak-b", "x": 800, "y": 420 },
+          { "id": "sak-c", "x": 740, "y": 480 },
+          { "id": "sak-d", "x": 530, "y": 600 },
+          { "id": "sak-e", "x": 530, "y": 760 },
+          { "id": "sak-f", "x": 720, "y": 840 }
+        ],
+        "stepCallouts": ["📦 Parallel manifest", "🌧 Canal scout clear", "✅ Lane unaffected"]
+      },
+      "janu": {
+        "robotId": "janu",
+        "role": "Restricted Zone R-2 cargo specialist",
+        "route": [
+          { "id": "dock", "x": 1120, "y": 180, "label": "Dock Yard" },
+          { "id": "jan-a", "x": 1120, "y": 320 },
+          { "id": "cp3", "x": 880, "y": 360 },
+          { "id": "jan-b", "x": 1040, "y": 410 },
+          { "id": "jan-c", "x": 920, "y": 580 },
+          { "id": "jan-d", "x": 960, "y": 780 }
+        ],
+        "stepCallouts": ["🛰 R-2 perimeter scan", "🛑 POLICY_PAUSED via ENS"]
+      }
+    },
+    "checkpoints": [
+      { "id": "cp-ens", "name": "CP1 · Mahim ENS Gate", "type": "ens_policy", "coordinates": { "x": 540, "y": 270 }, "status": "pending" },
+      { "id": "cp-pay", "name": "CP2 · Dadar x402 Relay", "type": "hedera_payment", "coordinates": { "x": 510, "y": 590 }, "status": "pending" },
+      { "id": "cp-deliver", "name": "Colaba Gate 4 Drop", "type": "delivery", "coordinates": { "x": 630, "y": 840 }, "status": "pending" }
+    ],
+    "steps": [
+      {
+        "checkpointId": "cp-ens",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-08-pre-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-08-pre-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-08-pre-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-08-pre-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-08-pre-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      },
+      {
+        "checkpointId": "cp-pay",
+        "action": { "type": "halt", "reason": "POLICY_PAUSED" },
+        "haltTarget": "janu",
+        "expectedProofs": [
+          { "id": "TC-08-janu-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "failed", "hash": "0xens…" },
+          { "id": "TC-08-janu-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "failed", "hash": "0x402…" },
+          { "id": "TC-08-janu-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "failed", "hash": "0xgzg…" },
+          { "id": "TC-08-janu-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "failed" },
+          { "id": "TC-08-janu-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "failed", "hash": "0xstore…" }
+        ]
+      },
+      {
+        "checkpointId": "cp-deliver",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-08-post-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-08-post-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-08-post-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-08-post-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-08-post-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      }
+    ],
+    "expectedOutcome": "DELIVERED"
+  },
+  {
+    "id": "TC-12",
+    "title": "Human Gate Approved (Zone R-2)",
+    "description": "Janu requests entry to Zone R-2. Stationmaster APPROVES; a 60s single-use token is minted and the sentry opens.",
+    "track": "ENS",
+    "leadRobot": "janu",
+    "lanes": {
+      "ramu": {
+        "robotId": "ramu",
+        "role": "Primary Western Line courier",
+        "route": [
+          { "id": "k1", "x": 650, "y": 120, "label": "K1" },
+          { "id": "adh", "x": 540, "y": 140 },
+          { "id": "cp1", "x": 540, "y": 270 },
+          { "id": "bvi", "x": 510, "y": 430 },
+          { "id": "cp2", "x": 510, "y": 590 },
+          { "id": "ccg", "x": 510, "y": 750 },
+          { "id": "col", "x": 630, "y": 840 }
+        ],
+        "stepCallouts": ["📦 Western line clear", "⚡ Paying 0.002 HBAR"]
+      },
+      "sakhu": {
+        "robotId": "sakhu",
+        "role": "Monsoon canal detour scout",
+        "route": [
+          { "id": "k2", "x": 900, "y": 140, "label": "K2" },
+          { "id": "sak-a", "x": 800, "y": 210 },
+          { "id": "sak-b", "x": 800, "y": 420 },
+          { "id": "sak-c", "x": 740, "y": 480 },
+          { "id": "sak-d", "x": 530, "y": 600 },
+          { "id": "sak-e", "x": 530, "y": 760 },
+          { "id": "sak-f", "x": 720, "y": 840 }
+        ],
+        "stepCallouts": ["🌧 Canal scout clear", "🤝 Relay standby"]
+      },
+      "janu": {
+        "robotId": "janu",
+        "role": "Restricted Zone R-2 cargo specialist",
+        "route": [
+          { "id": "dock", "x": 1120, "y": 180, "label": "Dock Yard" },
+          { "id": "jan-a", "x": 1120, "y": 320 },
+          { "id": "cp3", "x": 880, "y": 360 },
+          { "id": "jan-b", "x": 1040, "y": 410 },
+          { "id": "jan-c", "x": 920, "y": 580 },
+          { "id": "jan-d", "x": 960, "y": 780 }
+        ],
+        "stepCallouts": ["🛰 Requesting R-2 entry", "✅ Token minted · sentry open", "🏁 Delivery inside R-2"]
+      }
+    },
+    "checkpoints": [
+      { "id": "cp-gate", "name": "CP3 · R-2 Sentry Gate", "type": "human_gate", "coordinates": { "x": 880, "y": 360 }, "status": "pending" },
+      { "id": "cp-deliver", "name": "Colaba Gate 4 Drop", "type": "delivery", "coordinates": { "x": 630, "y": 840 }, "status": "pending" }
+    ],
+    "steps": [
+      {
+        "checkpointId": "cp-gate",
+        "action": { "type": "continue" },
+        "gateRequest": { "id": "gr-01", "robotId": "janu", "zoneId": "R-2", "nonce": "n-99", "ttlMs": 60000, "status": "approved" },
+        "expectedProofs": [
+          { "id": "TC-12-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-12-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-12-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-12-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-12-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      },
+      {
+        "checkpointId": "cp-deliver",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-12-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-12-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-12-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-12-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-12-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      }
+    ],
+    "expectedOutcome": "DELIVERED"
+  },
+  {
+    "id": "TC-13",
+    "title": "Human Gate Denied",
+    "description": "Janu requests entry to Zone R-2. Stationmaster DENIES; no token is issued and Janu executes a safe turnaround.",
+    "track": "ENS",
+    "leadRobot": "janu",
+    "lanes": {
+      "ramu": {
+        "robotId": "ramu",
+        "role": "Primary Western Line courier",
+        "route": [
+          { "id": "k1", "x": 650, "y": 120, "label": "K1" },
+          { "id": "adh", "x": 540, "y": 140 },
+          { "id": "cp1", "x": 540, "y": 270 },
+          { "id": "bvi", "x": 510, "y": 430 },
+          { "id": "cp2", "x": 510, "y": 590 },
+          { "id": "ccg", "x": 510, "y": 750 },
+          { "id": "col", "x": 630, "y": 840 }
+        ],
+        "stepCallouts": ["📦 Western line clear", "⚡ Paying 0.002 HBAR"]
+      },
+      "sakhu": {
+        "robotId": "sakhu",
+        "role": "Monsoon canal detour scout",
+        "route": [
+          { "id": "k2", "x": 900, "y": 140, "label": "K2" },
+          { "id": "sak-a", "x": 800, "y": 210 },
+          { "id": "sak-b", "x": 800, "y": 420 },
+          { "id": "sak-c", "x": 740, "y": 480 },
+          { "id": "sak-d", "x": 530, "y": 600 },
+          { "id": "sak-e", "x": 530, "y": 760 },
+          { "id": "sak-f", "x": 720, "y": 840 }
+        ],
+        "stepCallouts": ["🌧 Canal scout clear", "🤝 Relay standby"]
+      },
+      "janu": {
+        "robotId": "janu",
+        "role": "Restricted Zone R-2 cargo specialist",
+        "route": [
+          { "id": "dock", "x": 1120, "y": 180, "label": "Dock Yard" },
+          { "id": "jan-a", "x": 1120, "y": 320 },
+          { "id": "cp3", "x": 880, "y": 360 },
+          { "id": "jan-b", "x": 1040, "y": 410 },
+          { "id": "jan-c", "x": 920, "y": 580 },
+          { "id": "jan-d", "x": 960, "y": 780 }
+        ],
+        "stepCallouts": ["🛰 Requesting R-2 entry", "🛑 Denied · safe turnaround"]
+      }
+    },
+    "checkpoints": [
+      { "id": "cp-gate", "name": "CP3 · R-2 Sentry Gate", "type": "human_gate", "coordinates": { "x": 880, "y": 360 }, "status": "pending" }
+    ],
+    "steps": [
+      {
+        "checkpointId": "cp-gate",
+        "action": { "type": "halt", "reason": "GATE_DENIED" },
+        "gateRequest": { "id": "gr-02", "robotId": "janu", "zoneId": "R-2", "nonce": "n-99", "ttlMs": 60000, "status": "denied" },
+        "expectedProofs": [
+          { "id": "TC-13-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "failed", "hash": "0xens…" },
+          { "id": "TC-13-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "failed", "hash": "0x402…" },
+          { "id": "TC-13-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "failed", "hash": "0xgzg…" },
+          { "id": "TC-13-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "failed" },
+          { "id": "TC-13-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "failed", "hash": "0xstore…" }
+        ]
+      }
+    ],
+    "expectedOutcome": "REFUSED"
+  },
+  {
+    "id": "TC-16",
+    "title": "0G Outage Safe-Stop (No Guessing)",
+    "description": "0G Router goes down mid-run. All robots fail closed with ZG_TIMEOUT and halt on safe cells. No substitute decision is made.",
+    "track": "0G",
+    "leadRobot": "ramu",
+    "lanes": {
+      "ramu": {
+        "robotId": "ramu",
+        "role": "Primary Western Line courier",
+        "route": [
+          { "id": "k1", "x": 650, "y": 120, "label": "K1" },
+          { "id": "adh", "x": 540, "y": 140 },
+          { "id": "cp1", "x": 540, "y": 270 },
+          { "id": "bvi", "x": 510, "y": 430 },
+          { "id": "cp2", "x": 510, "y": 590 },
+          { "id": "ccg", "x": 510, "y": 750 },
+          { "id": "col", "x": 630, "y": 840 }
+        ],
+        "stepCallouts": ["🛂 ENS policy read", "🛑 ZG_TIMEOUT · parking"]
+      },
+      "sakhu": {
+        "robotId": "sakhu",
+        "role": "Monsoon canal detour scout",
+        "route": [
+          { "id": "k2", "x": 900, "y": 140, "label": "K2" },
+          { "id": "sak-a", "x": 800, "y": 210 },
+          { "id": "sak-b", "x": 800, "y": 420 },
+          { "id": "sak-c", "x": 740, "y": 480 },
+          { "id": "sak-d", "x": 530, "y": 600 },
+          { "id": "sak-e", "x": 530, "y": 760 },
+          { "id": "sak-f", "x": 720, "y": 840 }
+        ],
+        "stepCallouts": ["🌧 Canal scout clear", "🛑 ZG_TIMEOUT · parking"]
+      },
+      "janu": {
+        "robotId": "janu",
+        "role": "Restricted Zone R-2 cargo specialist",
+        "route": [
+          { "id": "dock", "x": 1120, "y": 180, "label": "Dock Yard" },
+          { "id": "jan-a", "x": 1120, "y": 320 },
+          { "id": "cp3", "x": 880, "y": 360 },
+          { "id": "jan-b", "x": 1040, "y": 410 },
+          { "id": "jan-c", "x": 920, "y": 580 },
+          { "id": "jan-d", "x": 960, "y": 780 }
+        ],
+        "stepCallouts": ["🛰 R-2 perimeter scan", "🛑 ZG_TIMEOUT · parking"]
+      }
+    },
+    "checkpoints": [
+      { "id": "cp-ens", "name": "CP1 · Mahim ENS Gate", "type": "ens_policy", "coordinates": { "x": 540, "y": 270 }, "status": "pending" },
+      { "id": "cp-pay", "name": "CP2 · Dadar x402 Relay", "type": "hedera_payment", "coordinates": { "x": 510, "y": 590 }, "status": "pending" }
+    ],
+    "steps": [
+      {
+        "checkpointId": "cp-ens",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-16-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-16-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-16-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-16-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-16-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      },
+      {
+        "checkpointId": "cp-pay",
+        "action": { "type": "halt", "reason": "ZG_TIMEOUT" },
+        "expectedProofs": [
+          { "id": "TC-16-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "failed", "hash": "0xens…" },
+          { "id": "TC-16-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "failed", "hash": "0x402…" },
+          { "id": "TC-16-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "failed", "hash": "0xgzg…" },
+          { "id": "TC-16-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "failed" },
+          { "id": "TC-16-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "failed", "hash": "0xstore…" }
+        ]
+      }
+    ],
+    "expectedOutcome": "HALTED"
+  },
+  {
+    "id": "TC-20",
+    "title": "Cryptographic Replay & Verification",
+    "description": "Full-fleet replay: the episode JSONL is re-hashed and compared against the RelayLedger root on 0G Galileo. Match confirmed.",
+    "track": "Integration",
+    "leadRobot": "ramu",
+    "lanes": {
+      "ramu": {
+        "robotId": "ramu",
+        "role": "Primary Western Line courier",
+        "route": [
+          { "id": "k1", "x": 650, "y": 120, "label": "K1" },
+          { "id": "adh", "x": 540, "y": 140 },
+          { "id": "cp1", "x": 540, "y": 270 },
+          { "id": "bvi", "x": 510, "y": 430 },
+          { "id": "cp2", "x": 510, "y": 590 },
+          { "id": "ccg", "x": 510, "y": 750 },
+          { "id": "col", "x": 630, "y": 840 }
+        ],
+        "stepCallouts": ["🎞 Replay: Mahim gate", "🎞 Replay: Dadar relay", "🎞 Replay: Colaba drop"]
+      },
+      "sakhu": {
+        "robotId": "sakhu",
+        "role": "Monsoon canal detour scout",
+        "route": [
+          { "id": "k2", "x": 900, "y": 140, "label": "K2" },
+          { "id": "sak-a", "x": 800, "y": 210 },
+          { "id": "sak-b", "x": 800, "y": 420 },
+          { "id": "sak-c", "x": 740, "y": 480 },
+          { "id": "sak-d", "x": 530, "y": 600 },
+          { "id": "sak-e", "x": 530, "y": 760 },
+          { "id": "sak-f", "x": 720, "y": 840 }
+        ],
+        "stepCallouts": ["🎞 Replay: canal lane", "🎞 Replay: detour", "🎞 Replay: relay standby"]
+      },
+      "janu": {
+        "robotId": "janu",
+        "role": "Restricted Zone R-2 cargo specialist",
+        "route": [
+          { "id": "dock", "x": 1120, "y": 180, "label": "Dock Yard" },
+          { "id": "jan-a", "x": 1120, "y": 320 },
+          { "id": "cp3", "x": 880, "y": 360 },
+          { "id": "jan-b", "x": 1040, "y": 410 },
+          { "id": "jan-c", "x": 920, "y": 580 },
+          { "id": "jan-d", "x": 960, "y": 780 }
+        ],
+        "stepCallouts": ["🎞 Replay: R-2 scan", "🎞 Replay: sentry hold", "🎞 Replay: perimeter"]
+      }
+    },
+    "checkpoints": [
+      { "id": "cp-ens", "name": "CP1 · Mahim ENS Gate", "type": "ens_policy", "coordinates": { "x": 540, "y": 270 }, "status": "pending" },
+      { "id": "cp-relay", "name": "Dadar Relay Handoff", "type": "relay", "coordinates": { "x": 510, "y": 590 }, "status": "pending" },
+      { "id": "cp-deliver", "name": "Colaba Gate 4 Drop", "type": "delivery", "coordinates": { "x": 630, "y": 840 }, "status": "pending" }
+    ],
+    "steps": [
+      {
+        "checkpointId": "cp-ens",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-20-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-20-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-20-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-20-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-20-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      },
+      {
+        "checkpointId": "cp-relay",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-20-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-20-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-20-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-20-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-20-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      },
+      {
+        "checkpointId": "cp-deliver",
+        "action": { "type": "continue" },
+        "expectedProofs": [
+          { "id": "TC-20-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "verified", "hash": "0xens…" },
+          { "id": "TC-20-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "verified", "hash": "0x402…" },
+          { "id": "TC-20-p3", "tier": 3, "title": "0G Compute Decision", "details": { "requestId": "zg-req-99", "modelHash": "sha256:…", "action": "continue" }, "status": "verified", "hash": "0xgzg…" },
+          { "id": "TC-20-p4", "tier": 4, "title": "Human Gate Permit", "details": { "zoneId": "R-2", "nonce": "0xabc", "ttlMs": 60000, "status": "minted" }, "status": "pending" },
+          { "id": "TC-20-p5", "tier": 5, "title": "0G Storage Ledger", "details": { "merkleRoot": "0xroot…", "anchorContract": "RelayLedger" }, "status": "verified", "hash": "0xstore…" }
+        ]
+      }
+    ],
+    "expectedOutcome": "DELIVERED"
+  }
+]
