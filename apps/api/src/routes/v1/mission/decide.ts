@@ -51,6 +51,7 @@ export const missionDecideRoutes: FastifyPluginAsync = async (app) => {
             },
           },
           400: { type: "object", properties: { error: { type: "string" } } },
+          500: { type: "object", properties: { error: { type: "string" } } },
           503: { type: "object", properties: { error: { type: "string" } } },
         },
       },
