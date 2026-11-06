@@ -3,6 +3,7 @@
   "services": {
     "api": {
       "root": "apps/api",
+      "entrypoint": "dist/index.js",
       "buildCommand": "pnpm run build",
       "devCommand": "pnpm run dev",
       "installCommand": "pnpm install",
