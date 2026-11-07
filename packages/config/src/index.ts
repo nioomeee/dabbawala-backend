@@ -82,8 +82,11 @@ const EnvSchema = z.object({
   // 0G Chain (Galileo). ref: implementation.md §6
   ZERO_G_CHAIN_ID: optionalNumber(),
   ZERO_G_RPC_URL: optionalString(),
-  // Populated from Hardhat deployment output during local runs. ref: implementation.md §6
+  // Populated from the Galileo deployment output during the build. ref: implementation.md §6
   RELAY_LEDGER_ADDRESS: optionalString(),
+  // Signer key of the contract's authorized `anchorer` (the deployer account).
+  // Chain-write key for episode-root anchoring only. ref: AGENTS.md §11
+  RELAY_LEDGER_PRIVATE_KEY: optionalString(),
 
   // Hedera (Testnet). ref: REFERENCES.md §3 R-HE-1..R-HE-4
   HEDERA_NETWORK: z.enum(["testnet", "mainnet"]).default("testnet"),

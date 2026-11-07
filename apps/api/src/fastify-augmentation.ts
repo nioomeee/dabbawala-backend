@@ -13,11 +13,13 @@
 
 import type { ZeroGRuntime } from "@dabbawala/zero-g-adapter";
 import type { EnsPolicyReader } from "./adapters/ens-reader.js";
+import type { RelayLedgerAnchorer } from "./services/relay-ledger.js";
 
 declare module "fastify" {
   interface FastifyInstance {
     readonly zeroG: ZeroGRuntime | null;
     readonly ens: EnsPolicyReader | null;
+    readonly relayLedger: RelayLedgerAnchorer | null;
   }
   // OpenAPI route metadata (tags/summary) is consumed by schema serializers;
   // Fastify's base FastifySchema omits both, so routes declaring them fail to

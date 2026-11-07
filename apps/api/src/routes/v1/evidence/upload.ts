@@ -26,13 +26,45 @@
  */
 
 import type { FastifyPluginAsync } from "fastify";
-import { getDatabase, episodes, episodeLogs, sql } from "@dabbawala/database";
+import { getDatabase, episodes, episodeLogs, robots, sql } from "@dabbawala/database";
 import { lintEpisodeLog } from "../../../services/log-lint.js";
 import { createLogger } from "@dabbawala/observability";
-import { randomBytes } from "node:crypto";
 import type { RobotId } from "@dabbawala/shared";
 
 const log = createLogger("api:evidence");
+
+/**
+ * Derive the episode seed/scenario from the JSONL header line when present
+ * (first line: { type: "header", seed, scenario, ... } — ROADMAP.md §4.6).
+ * Returns null when the content does not carry a readable header.
+ */
+function parseHeaderSeed(content: string): string | null {
+  const first = content.split("\n")[0] ?? "";
+  try {
+    const parsed: unknown = JSON.parse(first);
+    if (typeof parsed === "object" && parsed !== null && "seed" in parsed) {
+      const seed = (parsed as { seed?: unknown }).seed;
+      return typeof seed === "string" && seed.length > 0 ? seed.slice(0, 128) : null;
+    }
+  } catch {
+    // fall through
+  }
+  return null;
+}
+
+function parseHeaderScenario(content: string): string | null {
+  const first = content.split("\n")[0] ?? "";
+  try {
+    const parsed: unknown = JSON.parse(first);
+    if (typeof parsed === "object" && parsed !== null && "scenario" in parsed) {
+      const scenario = (parsed as { scenario?: unknown }).scenario;
+      return typeof scenario === "string" && scenario.length > 0 ? scenario.slice(0, 64) : null;
+    }
+  } catch {
+    // fall through
+  }
+  return null;
+}
 
 export const evidenceUploadRoutes: FastifyPluginAsync = async (app) => {
   app.post(
@@ -59,6 +91,7 @@ export const evidenceUploadRoutes: FastifyPluginAsync = async (app) => {
               storageTxId: { type: "string" },
               anchorTxId: { type: "string" },
               status: { type: "string" },
+              relayLedgerAddress: { type: "string" },
             },
           },
           400: {
@@ -108,7 +141,25 @@ export const evidenceUploadRoutes: FastifyPluginAsync = async (app) => {
 
         const episode = episodeRows[0];
         if (!episode) {
-          return reply.status(400).send({ error: "EPISODE_NOT_FOUND" });
+          // First upload for this episode id — create the row on demand so the
+          // anchor flow can run without a separate registration call.
+          // robots row is required by the episodes FK.
+          const effectiveRobotIdOnCreate = (robotId ?? "ramu") as RobotId;
+          await db
+            .insert(robots)
+            .values({ id: effectiveRobotIdOnCreate, currentCell: "cell-0", checkpointIndex: 0 })
+            .onConflictDoNothing();
+          await db
+            .insert(episodes)
+            .values({
+              episodeId,
+              robotId: effectiveRobotIdOnCreate,
+              seed: parseHeaderSeed(content) ?? "UNKNOWN_SEED",
+              scenario: parseHeaderScenario(content) ?? episodeId,
+              state: "received",
+              startedAt: new Date(),
+            })
+            .onConflictDoNothing();
         }
 
         // 2. Validate all decision records
@@ -159,7 +210,7 @@ export const evidenceUploadRoutes: FastifyPluginAsync = async (app) => {
         let rootHash = "";
         let storageTxId = "";
         const effectiveKind = kind ?? "episode-log";
-        const effectiveRobotId = (robotId || episode.robotId) as RobotId;
+        const effectiveRobotId = (robotId || episodeRows[0]?.robotId || "ramu") as RobotId;
 
         const uploadResult = await zeroG.evidence.put({
           episodeId,
@@ -177,22 +228,52 @@ export const evidenceUploadRoutes: FastifyPluginAsync = async (app) => {
           return reply.status(500).send({ error: "UPLOAD_FAILED", details: JSON.stringify(uploadResult.error) });
         }
 
-        // 13. Anchor the root using RelayLedger (simulated/configured)
-        const relayLedgerAddress = "0x..."; // placeholder - from config
-        const anchorTxId = `0x${randomBytes(32).toString("hex")}`;
+        // 13. Anchor the root on RelayLedger (0G Galileo) — REAL on-chain write.
+        // Fail closed when the anchorer is not configured; never fabricate a tx id.
+        // ref: ROADMAP.md §4.7, implementation.md §4.5 steps 16–18
+        const relayAnchorer = app.relayLedger;
+        if (relayAnchorer === null) {
+          log.warn({ episodeId }, "RelayLedger anchorer not configured");
+          return reply.status(503).send({ error: "RELAY_LEDGER_UNCONFIGURED" });
+        }
+        const anchorResult = await relayAnchorer.anchorEpisode({
+          robotId: effectiveRobotId,
+          episodeId,
+          rootHash,
+        });
+        if (!anchorResult.ok) {
+          const e = anchorResult.error;
+          if (e.code === "RL_ALREADY_ANCHORED") {
+            // Idempotent re-upload: the root is already on-chain — treat as
+            // complete without re-spending gas. The stored root is unchanged.
+            log.warn({ episodeId }, "Episode root already anchored on RelayLedger");
+            return reply.send({
+              rootHash,
+              storageTxId,
+              anchorTxId: "already_anchored",
+              status: "complete",
+              relayLedgerAddress: relayAnchorer.contractAddressPublic,
+            });
+          }
+          log.error({ episodeId, code: e.code, detail: e.detail }, "RelayLedger anchoring failed");
+          return reply.status(500).send({ error: e.code, details: e.detail });
+        }
+        const relayLedgerAddress = anchorResult.receipt.relayLedgerAddress;
+        const anchorTxId = anchorResult.receipt.txHash;
 
-        // 15. Persist the Storage receipt
+        // 15. Persist the Storage receipt — seed/scenario fall back to the
+        // header-derived values when the row was created by this upload.
         await db.insert(episodes).values({
           episodeId,
           robotId: effectiveRobotId,
-          seed: episode.seed,
-          scenario: episode.scenario,
-          state: "evidence_uploaded",
+          seed: episodeRows[0]?.seed ?? parseHeaderSeed(content) ?? "UNKNOWN_SEED",
+          scenario: episodeRows[0]?.scenario ?? parseHeaderScenario(content) ?? episodeId.slice(0, 64),
+          state: "uploaded",
           rootHash,
           storageRef: `0g-${storageTxId}`,
           relayLedgerAddress,
           anchorTxId,
-          startedAt: episode.startedAt,
+          startedAt: episodeRows[0]?.startedAt ?? new Date(),
           completedAt: new Date(),
         }).onConflictDoUpdate({
           target: episodes.episodeId,
@@ -200,6 +281,7 @@ export const evidenceUploadRoutes: FastifyPluginAsync = async (app) => {
             state: sql`excluded.state`,
             rootHash: sql`excluded.root_hash`,
             storageRef: sql`excluded.storage_ref`,
+            relayLedgerAddress: sql`excluded.relay_ledger_address`,
             anchorTxId: sql`excluded.anchor_tx_id`,
             completedAt: sql`now()`,
           },
@@ -212,6 +294,7 @@ export const evidenceUploadRoutes: FastifyPluginAsync = async (app) => {
           storageTxId,
           anchorTxId,
           status: "complete",
+          relayLedgerAddress,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

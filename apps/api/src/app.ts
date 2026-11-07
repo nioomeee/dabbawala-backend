@@ -15,6 +15,7 @@ import { loadConfig } from "@dabbawala/config";
 import { createZeroGRuntime } from "@dabbawala/zero-g-adapter";
 import { createEnsPolicyReader } from "./adapters/ens-reader.js";
 import "./fastify-augmentation.js";
+import { RelayLedgerAnchorer } from "./services/relay-ledger.js";
 import { healthRoutes } from "./routes/v1/health.js";
 import { scenarioRoutes } from "./routes/v1/console/scenarios.js";
 import { passportRoutes } from "./routes/v1/robots/passport.js";
@@ -97,6 +98,20 @@ export function buildApp() {
     );
     app.decorate("ens", ensResult.reader);
   }
+
+  // RelayLedger anchorer decoration (real 0G Galileo writes for episode roots).
+  // Malformed/missing config → decorator is null; /v1/evidence/upload fails
+  // closed with 503 RELAY_LEDGER_UNCONFIGURED. ref: ROADMAP.md §4.7
+  let relayLedger: RelayLedgerAnchorer | null = null;
+  try {
+    relayLedger = new RelayLedgerAnchorer();
+  } catch (err: unknown) {
+    log.warn(
+      { reason: err instanceof Error ? err.message : String(err) },
+      "RelayLedger anchorer not configured — evidence anchoring fails closed",
+    );
+  }
+  app.decorate("relayLedger", relayLedger);
 
   void app.register(import("@fastify/sensible"));
 
