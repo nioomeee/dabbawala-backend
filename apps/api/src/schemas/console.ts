@@ -20,9 +20,6 @@ export const RobotIdSchema = z.enum(ROBOT_IDS as [RobotId, ...RobotId[]]);
 // ── Action (closed set + halt, exactly as frontend data/types.ts) ───────────
 
 const HaltReasonSchema = z.enum([
-  "ZG_TIMEOUT",
-  "ZG_TRANSPORT",
-  "ZG_MALFORMED",
   "ACTION_NOT_ALLOWED",
   "ENS_UNREADABLE",
   "POLICY_PAUSED",

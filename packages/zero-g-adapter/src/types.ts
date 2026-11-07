@@ -21,7 +21,6 @@ export type FailureKind =
   | "BLOCKED" //            adapter not configured (no network call made)
   | "INVALID_STATE" //      caller's StateSummary invalid/oversized (no call made)
   | "CONCURRENCY" //        local in-flight limit reached (no call made)
-  | "TIMEOUT" //            attempt exceeded requestTimeoutMs
   | "NETWORK" //            DNS/TLS/connection/reset
   | "HTTP_RETRYABLE" //     429 / 500 / 502 / 504
   | "HTTP_FATAL" //         400 / 401 / 402 / 403 / 404 / 503 / other non-2xx
@@ -149,7 +148,7 @@ export interface RouterRawResponse {
 }
 
 export interface RouterTransportFailure {
-  readonly kind: "TIMEOUT" | "NETWORK" | "BODY_TOO_LARGE";
+  readonly kind: "NETWORK" | "BODY_TOO_LARGE";
   /** Short code only; never a raw error message containing secrets. */
   readonly detail: string;
   readonly latencyMs: number;

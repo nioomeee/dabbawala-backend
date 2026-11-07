@@ -183,7 +183,7 @@ flowchart LR
 12. Motion safety stays on the device in principle. This project simulates the robot and must say so.
 
 ### 4.4 Halt reason codes (PROPOSED; freeze in H0)
-`ZG_TIMEOUT` · `ZG_TRANSPORT` · `ZG_MALFORMED` · `ACTION_NOT_ALLOWED` · `ENS_UNREADABLE` · `POLICY_PAUSED` · `BUDGET_EXHAUSTED` · `PAYEE_NOT_ALLOWED` · `OVER_CAP` · `FACILITATOR_DOWN` · `GATE_DENIED` · `APPROVAL_EXPIRED` · `APPROVAL_REPLAYED` · `ZONE_REMOVED`
+`ACTION_NOT_ALLOWED` · `ENS_UNREADABLE` · `POLICY_PAUSED` · `BUDGET_EXHAUSTED` · `PAYEE_NOT_ALLOWED` · `OVER_CAP` · `FACILITATOR_DOWN` · `GATE_DENIED` · `APPROVAL_EXPIRED` · `APPROVAL_REPLAYED` · `ZONE_REMOVED`
 
 ### 4.5 Interfaces to freeze in hour 0 (PROPOSED TypeScript; confirm with the human)
 
@@ -421,7 +421,7 @@ Each spike writes `docs/spikes/<name>.md` with exact commands, versions, results
 ### Deterministic scenarios (seeded; fixed seed in config)
 - **Monsoon:** a flooded lane closes the baseline route at checkpoint 2. The 0G-chosen route must differ from the baseline.
 - **Budget squeeze:** budget covers N legs. Leg N+1 is refused and an operator-ask event fires.
-- **0G outage:** the 0G host is blocked at checkpoint 2. The robot halts with `ZG_TIMEOUT`, then resumes only after a fresh call.
+- **0G outage:** the 0G host is blocked at checkpoint 2. The robot halts, then resumes only after a fresh call.
 
 ---
 

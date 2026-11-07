@@ -673,7 +673,7 @@
   {
     "id": "TC-16",
     "title": "0G Outage Safe-Stop (No Guessing)",
-    "description": "0G Router goes down mid-run. All robots fail closed with ZG_TIMEOUT and halt on safe cells. No substitute decision is made.",
+    "description": "0G Router goes down mid-run. All robots fail closed and halt on safe cells. No substitute decision is made.",
     "track": "0G",
     "leadRobot": "ramu",
     "lanes": {
@@ -689,7 +689,7 @@
           { "id": "ccg", "x": 510, "y": 750 },
           { "id": "col", "x": 630, "y": 840 }
         ],
-        "stepCallouts": ["🛂 ENS policy read", "🛑 ZG_TIMEOUT · parking"]
+        "stepCallouts": ["🛂 ENS policy read", "🛑 parking"]
       },
       "sakhu": {
         "robotId": "sakhu",
@@ -703,7 +703,7 @@
           { "id": "sak-e", "x": 530, "y": 760 },
           { "id": "sak-f", "x": 720, "y": 840 }
         ],
-        "stepCallouts": ["🌧 Canal scout clear", "🛑 ZG_TIMEOUT · parking"]
+        "stepCallouts": ["🌧 Canal scout clear", "🛑 parking"]
       },
       "janu": {
         "robotId": "janu",
@@ -716,7 +716,7 @@
           { "id": "jan-c", "x": 920, "y": 580 },
           { "id": "jan-d", "x": 960, "y": 780 }
         ],
-        "stepCallouts": ["🛰 R-2 perimeter scan", "🛑 ZG_TIMEOUT · parking"]
+        "stepCallouts": ["🛰 R-2 perimeter scan", "🛑 parking"]
       }
     },
     "checkpoints": [
@@ -737,7 +737,7 @@
       },
       {
         "checkpointId": "cp-pay",
-        "action": { "type": "halt", "reason": "ZG_TIMEOUT" },
+        "action": { "type": "halt", "reason": "ACTION_NOT_ALLOWED" },
         "expectedProofs": [
           { "id": "TC-16-p1", "tier": 1, "title": "ENS Policy Read", "details": { "block": "0x1A2B3C", "status": "active", "budget": "5000000" }, "status": "failed", "hash": "0xens…" },
           { "id": "TC-16-p2", "tier": 2, "title": "Hedera x402 Payment", "details": { "txId": "0.0.6001#492", "amountHbar": 0.002, "feeHbar": 0.0001 }, "status": "failed", "hash": "0x402…" },

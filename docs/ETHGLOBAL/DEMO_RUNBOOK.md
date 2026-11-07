@@ -60,7 +60,7 @@
 14. During mission run, the judge can:
     - Block the 0G Router (judge-side devtool: `process.env.ZERO_G_ROUTER_BASE_URL = ""`)
     - Press the checkpoint decision button
-    - Observe: robot safe-stops with `haltReason = "ZG_TIMEOUT"`, verdict = "SAFE-STOP"
+    - Observe: robot safe-stops with `haltReason = "ACTION_NOT_ALLOWED"`, verdict = "SAFE-STOP"
     - Check inspector: 0G Compute shows `status: BLOCKED`, `proven: false`
     - Restore the env variable and press "Reset" → fresh play required (no resume from halted state)
 
@@ -142,7 +142,7 @@
 4. How does x402 settle without a human approving every payment? → The agent auto-recognises the HTTP 402 challenge; prepares payment (amount, payee, metadata); submits to facilitator; facilitator settles on Hedera testnet via TransferTransaction; receipt.status === "SUCCESS" → payment verified; only CONFIRMED status authorises the paid action; idempotency key prevents double-charge on retry
 5. How are spending limits enforced under concurrent requests? → Per-request cap (1000 atomic), immutable hard ceiling (50000 atomic), and per-robot ENS budget (from resolver) — all enforced via atomic database reservations; two simultaneous requests cannot both spend against same remaining budget; the first to commit wins; the second respects the updated total
 6. How is episode integrity verified? → JSONL evidence uploaded to 0G Storage; Merkle root computed deterministically; root anchored on RelayLedger (Galileo, chain 16602); verifier downloads file, recomputes root, reads on-chain root, compares both roots; structured result: `storageVerified`, `anchorVerified`, `integrityVerified`
-7. What happens when an RPC or sponsor service fails? → Fail-closed: 503 ENS_UNREADABLE if ENS RPC down; 0G timeout → safe-stop with `ZG_TIMEOUT` halt reason; no fallback model decision; database outage → fail closed (no in-memory Map for critical state); HCS event failure → non-blocking, async retry
+7. What happens when an RPC or sponsor service fails? → Fail-closed: 503 ENS_UNREADABLE if ENS RPC down; 0G timeout → safe-stop with halt reason; no fallback model decision; database outage → fail closed (no in-memory Map for critical state); HCS event failure → non-blocking, async retry
 8. What parts are real versus simulated? → Real: ENSv2 on Sepolia (actual resolver reads), 0G Router API calls (when key valid, TEE-verified), Hedera testnet x402 settlement (real tx IDs on HashScan), Spend Controller PostgreSQL persistence, Policy Engine validation logic. Simulated: 0G Mock mode when live key unavailable, ENS stub mode when Sepolia RPC unreachable, Human gate modal UI (backend enforces, frontend sim), SVG robot animation (driven by backend state where possible)
 9. What would be required for real delivery robots? → Physical robot hardware integration; real-world GPS/ODOMETRY sensors; real-world budget management beyond testnet HBAR; real-world restricted zone geofencing; regulatory compliance; real-world HCS topic with actual organisations; multi-agent coordination with real fleet management; extended TEE guarantees for physical world operations
 

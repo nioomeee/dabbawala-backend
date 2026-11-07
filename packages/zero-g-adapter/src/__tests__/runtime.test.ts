@@ -18,7 +18,7 @@ describe("createZeroGRuntime", () => {
     expect(rd.storage.status).toBe("BLOCKED");
     expect(rd.compute.proven).toBe(false);
     expect(rd.networkProbed).toBe(false);
-    expect(await rt.value.brain.decide(makeState())).toMatchObject({ halted: true, reason: "ZG_TRANSPORT" });
+    expect(await rt.value.brain.decide(makeState())).toMatchObject({ halted: true, reason: "ACTION_NOT_ALLOWED" });
     expect(calls).toHaveLength(0);
     expect(await rt.value.evidence.put({ episodeId: "e", robotId: "ramu", kind: "episode-log", content: "{}\n" })).toMatchObject({ ok: false, error: { kind: "BLOCKED" } });
   });

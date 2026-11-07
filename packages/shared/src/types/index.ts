@@ -1,21 +1,13 @@
-/**
+/*************************************************************************************************************************************
  * Dabbawala Protocol — Shared Types
  *
  * These types are the frozen interface agreed in ROADMAP.md §4.5.
  * They must not be changed without human approval.
  * Every boundary in the system validates against these schemas (zod).
- *
- * ref: ROADMAP.md §4.5, §4.6, §4.4
- */
+ * ref: ROADMAP.md §4.5, §4.6, §4.3
+ *************************************************************************************************************************************/
 
 // ── Robot identity ────────────────────────────────────────────────────────────
-
-/**
- * The three robots in the Mumbai demo.
- * Names finalised per implementation.md §2 (D1) on 2026-10-31.
- * Previous names (andheri-01/bandra-02/colaba-03) are superseded.
- * ref: ROADMAP.md §4.5, implementation.md §1 D1
- */
 export type RobotId = "ramu" | "sakhu" | "janu";
 
 export const ROBOT_IDS: readonly RobotId[] = ["ramu", "sakhu", "janu"] as const;
@@ -25,6 +17,13 @@ export const ROBOT_ENS_NAMES: Readonly<Record<RobotId, string>> = {
   ramu: "ramu.dabbawala.eth",
   sakhu: "sakhu.dabbawala.eth",
   janu: "janu.dabbawala.eth",
+} as const;
+
+/** Zones each robot may enter. ref: implementation.md §2 */
+export const ROBOT_ZONES: Readonly<Record<RobotId, readonly string[]>> = {
+  ramu: ["mahim", "dadar", "churchgate"],
+  sakhu: ["mahim", "dadar"],
+  janu: ["docks-r2"],
 } as const;
 
 /**
@@ -37,13 +36,6 @@ export const ROBOT_BUDGET_MICRO_HBAR: Readonly<Record<RobotId, number>> = {
   ramu: 5000,
   sakhu: 5000,
   janu: 5000,
-} as const;
-
-/** Zones each robot may enter. ref: implementation.md §2 */
-export const ROBOT_ZONES: Readonly<Record<RobotId, readonly string[]>> = {
-  ramu: ["mahim", "dadar", "churchgate"],
-  sakhu: ["mahim", "dadar"],
-  janu: ["docks-r2"],
 } as const;
 
 // ── Closed action set ─────────────────────────────────────────────────────────
@@ -59,19 +51,12 @@ export type Action =
   | { readonly type: "ask_human"; readonly zoneId: string };
 
 export type ActionType = Action["type"];
-
-export const ACTION_TYPES: readonly ActionType[] = [
-  "continue",
-  "reroute",
-  "handoff",
-  "ask_human",
-] as const;
+export const ACTION_TYPES: readonly ActionType[] = ["continue", "reroute", "handoff", "ask_human"] as const;
 
 // ── Policy snapshot ───────────────────────────────────────────────────────────
 
 /**
- * Block-stamped policy snapshot read from ENS.
- * The policy engine must validate every action against a fresh snapshot.
+ * Block-stamped policy snapshot read from ENS. The policy engine must validate every action against a fresh snapshot.
  * Cache TTL: 10-15 s. ref: ROADMAP.md §4.9, invariant §4.3.3
  */
 export type PolicySnapshot = {
@@ -87,16 +72,68 @@ export type PolicySnapshot = {
   readonly readAtMs: number;
 };
 
+// ── Ens record writes ──────────────────────────────────────────────────────────
+
+/** A single record write submitted to a resolver. ref: ENSv2_implementation.md §5 */
+export type EnsRecordWrite = {
+  readonly name: string;
+  readonly key: string;
+  readonly value: string;
+  readonly coinType?: number;
+};
+
+/** A text record read back from a resolver. */
+export type EnsTextRecord = {
+  readonly key: string;
+  readonly value: string;
+};
+
+/** An address record read back from a resolver (coinType 60 = ETH). */
+export type EnsAddressRecord = {
+  readonly coinType: number;
+  readonly address: string;
+};
+
+/** The complete record bundle served by a resolver for one name. */
+export type EnsRecordBundle = {
+  readonly name?: string;
+  readonly text?: readonly EnsTextRecord[];
+  readonly addresses?: readonly EnsAddressRecord[];
+  readonly contenthash?: string;
+  readonly data?: readonly { readonly key: string; readonly value: string }[];
+};
+
+// ── ENS policy snapshot ──────────────────────────────────────────────────────
+
+/**
+ * The full set of records read from one robot's resolver in a single
+ * block-stamped pass. Every consumer of ENS data goes through this shape.
+ * ref: ENSv2_implementation.md §4, ROADMAP.md §4.5
+ */
+export type EnforcedPolicy = {
+  readonly robotId: RobotId;
+  readonly ensName: string;
+  readonly resolver: string;
+  readonly zones: readonly string[];
+  readonly budgetAtomic: string;
+  readonly status: "active" | "paused";
+  readonly lastEpisode: string | null;
+  readonly hederaAccount: string | null;
+  readonly eacVersionId?: number;
+  readonly block: bigint;
+  readonly valuesHash: string;
+  readonly readAtMs: number;
+  readonly source: "sim" | "live";
+};
+
 // ── Halt reason codes ─────────────────────────────────────────────────────────
 
 /**
  * Halt reason codes. ref: ROADMAP.md §4.4 (PROPOSED; freeze in H0)
  * When a robot halts it must record exactly one of these.
+ * Note: ZG_TIMEOUT, ZG_TRANSPORT, ZG_MALFORMED removed per Phase B cleanup.
  */
 export type HaltReason =
-  | "ZG_TIMEOUT"
-  | "ZG_TRANSPORT"
-  | "ZG_MALFORMED"
   | "ACTION_NOT_ALLOWED"
   | "ENS_UNREADABLE"
   | "POLICY_PAUSED"
@@ -109,10 +146,8 @@ export type HaltReason =
   | "APPROVAL_REPLAYED"
   | "ZONE_REMOVED";
 
+/** All valid halt reasons, as a readonly const array. */
 export const HALT_REASONS: readonly HaltReason[] = [
-  "ZG_TIMEOUT",
-  "ZG_TRANSPORT",
-  "ZG_MALFORMED",
   "ACTION_NOT_ALLOWED",
   "ENS_UNREADABLE",
   "POLICY_PAUSED",
@@ -124,13 +159,31 @@ export const HALT_REASONS: readonly HaltReason[] = [
   "APPROVAL_EXPIRED",
   "APPROVAL_REPLAYED",
   "ZONE_REMOVED",
-] as const;
+];
 
-export type Halt = {
-  readonly halted: true;
-  readonly reason: HaltReason;
-  readonly detail?: string;
+// ── ENS read failure ─────────────────────────────────────────────────────────
+
+/**
+ * Structured failure for an ENS read. Never throw raw strings; callers map
+ * this to a 503 ENS_UNREADABLE. ref: ENSv2_implementation.md §5, AGENTS.md §8
+ */
+export type PolicyReadError = {
+  readonly code: "ENS_UNREADABLE" | "ENS_RPC_ERROR" | "ENS_MALFORMED";
+  readonly detail: string;
+  readonly retryable: boolean;
 };
+
+// ── Zone approver allowlist ──────────────────────────────────────────────────
+
+/** One entry in the per-zone approver allowlist. ref: ENSv2_implementation.md §5 */
+export type ZoneApproverEntry = {
+  readonly approver: string;
+  readonly zones: readonly string[];
+  readonly label?: string;
+};
+
+/** The full per-zone approver allowlist. ref: ROADMAP.md §4.3.8 */
+export type ZoneAllowlist = ReadonlyArray<ZoneApproverEntry>;
 
 // ── Core interface signatures ─────────────────────────────────────────────────
 
@@ -178,9 +231,7 @@ export type ApplyResult =
 
 // ── Episode log schema ────────────────────────────────────────────────────────
 
-/**
- * Episode log entry types. ref: ROADMAP.md §4.6
- */
+/** Episode log entry types. ref: ROADMAP.md §4.6 */
 export type EpisodeEventType =
   | "decision"
   | "payment"
@@ -190,11 +241,7 @@ export type EpisodeEventType =
   | "resume"
   | "anchor";
 
-/**
- * A single episode log entry (one JSON object per JSONL line).
- * The verifier re-hashes the whole file and compares with the RelayLedger root.
- * ref: ROADMAP.md §4.6, §4.7
- */
+/** A single episode log entry (one JSONL line). */
 export type EpisodeLogEntry = {
   readonly seq: number;
   readonly tsMs: number;
@@ -205,8 +252,8 @@ export type EpisodeLogEntry = {
   readonly requestId?: string;
   readonly txId?: string;
   readonly hcsSeq?: number;
-  readonly action?: Action;
-  readonly reason?: HaltReason;
+  readonly action?: unknown;
+  readonly reason?: string;
   readonly detail?: string;
 };
 
@@ -239,9 +286,13 @@ export type EpisodeState = "local" | "stored" | "anchored" | "verified" | "unanc
  * Standard typed Result type used throughout the system.
  * Never throw unhandled strings or generic errors. ref: AGENTS.md §8
  */
-export type Result<T, E = Error> =
-  | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly error: E };
+export type Result<T, E = Error> = {
+  readonly ok: true;
+  readonly value: T;
+} | {
+  readonly ok: false;
+  readonly error: E;
+};
 
 export function ok<T>(value: T): Result<T, never> {
   return { ok: true, value };
@@ -253,7 +304,7 @@ export function err<E>(error: E): Result<never, E> {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-/** USDC decimals on Hedera testnet. ref: REFERENCES.md F12, R-HE-2 */
+/** USDC decimals on Hedera testnet. ref: REFERENCES.md F12 */
 export const USDC_DECIMALS = 6 as const;
 
 /** Approval token TTL in milliseconds. ref: ROADMAP.md §4.3.7, §4.11 */
@@ -293,61 +344,7 @@ export const ENS_RECORD_KEYS = {
 
 export type EnsRecordKey = (typeof ENS_RECORD_KEYS)[keyof typeof ENS_RECORD_KEYS];
 
-// ── ENS policy snapshot ──────────────────────────────────────────────────────
-
-/**
- * The full set of records read from one robot's resolver in a single
- * block-stamped pass. Every consumer of ENS data goes through this shape.
- * ref: ENSv2_implementation.md §4, ROADMAP.md §4.5
- */
-export type EnforcedPolicy = {
-  readonly robotId: RobotId;
-  readonly ensName: string;
-  readonly resolver: string;
-  readonly zones: readonly string[];
-  readonly budgetAtomic: string;
-  readonly status: "active" | "paused";
-  readonly lastEpisode: string | null;
-  readonly hederaAccount: string | null;
-  readonly eacVersionId?: number;
-  readonly block: bigint;
-  readonly valuesHash: string;
-  readonly readAtMs: number;
-  readonly source: "sim" | "live";
-};
-
-// ── ENS record writes ────────────────────────────────────────────────────────
-
-/** A single record write submitted to a resolver. ref: ENSv2_implementation.md §5 */
-export type EnsRecordWrite = {
-  readonly name: string;
-  readonly key: string;
-  readonly value: string;
-  readonly coinType?: number;
-};
-
-/** A text record read back from a resolver. */
-export type EnsTextRecord = {
-  readonly key: string;
-  readonly value: string;
-};
-
-/** An address record read back from a resolver (coinType 60 = ETH). */
-export type EnsAddressRecord = {
-  readonly coinType: number;
-  readonly address: string;
-};
-
-/** The complete record bundle served by a resolver for one name. */
-export type EnsRecordBundle = {
-  readonly name?: string;
-  readonly text?: readonly EnsTextRecord[];
-  readonly addresses?: readonly EnsAddressRecord[];
-  readonly contenthash?: string;
-  readonly data?: readonly { readonly key: string; readonly value: string }[];
-};
-
-// ── Permissioned Resolver ────────────────────────────────────────────────────
+// ── Permissioned Resolver ──────────────────────────────────────────────────────
 
 /**
  * The ENSv2 Enhanced Access Control role bitmap constants.
@@ -361,7 +358,6 @@ export const ENS_ROLES = {
   ROLE_SET_TEXT: 1n << 4n,
   ROLE_SET_CONTENTHASH: 1n << 8n,
   ROLE_SET_ABI: 1n << 12n,
-  ROLE_SET_INTERFACE: 1n << 16n,
   ROLE_SET_NAME: 1n << 20n,
   ROLE_SET_DATA: 1n << 24n,
   ROLE_LINK: 1n << 28n,
@@ -384,7 +380,7 @@ export function ensRoleAdmin(role: bigint): bigint {
 
 /** Bitmap of every role plus its admin counterpart (admin = role << 128). */
 export const ENS_ALL_ROLES =
-  0x1111111111111111111111111111111111111111111111111111111111111111n;
+  0x111111111111111111111111111111111111111111111111111111111111111n;
 
 /** Metadata about a Permissioned Resolver proxy. ref: R-ENS-2 */
 export type PermissionedResolverInfo = {
@@ -396,30 +392,74 @@ export type PermissionedResolverInfo = {
 
 // ── Zone approver allowlist ──────────────────────────────────────────────────
 
-/** One entry in the per-zone approver allowlist. ref: ENSv2_implementation.md §5 */
-export type ZoneApproverEntry = {
-  readonly approver: string;
-  readonly zones: readonly string[];
-  readonly label?: string;
-};
-
-/** The full per-zone approver allowlist. ref: ROADMAP.md §4.3.8 */
-export type ZoneAllowlist = ReadonlyArray<ZoneApproverEntry>;
+// (defined above as ZoneApproverEntry and ZoneAllowlist)
 
 // ── ENS read failure ─────────────────────────────────────────────────────────
 
+// (defined above as PolicyReadError)
+
+// ── Gate decision receipt (re-exported for convenience) ───────────────────────
+
 /**
- * Structured failure for an ENS read. Never throw raw strings; callers map
- * this to a 503 ENS_UNREADABLE. ref: ENSv2_implementation.md §5, AGENTS.md §8
+ * GateDecisionReceipt is the single-use token bound to (robot, zone, nonce, 0G request id),
+ * TTL <= 60s. ref: ROADMAP.md §4.3.7, §4.11
+ * Declared in schemas.ts; kept here as a note that the
+ * single-use token is bound to (robot, zone, nonce, 0G request id), TTL <= 60s.
+ * ref: ROADMAP.md §4.3.7, §4.11
  */
-export type PolicyReadError = {
-  readonly code: "ENS_UNREADABLE" | "ENS_RPC_ERROR" | "ENS_MALFORMED";
-  readonly detail: string;
-  readonly retryable: boolean;
+export type GateDecisionReceipt = {
+  readonly robotId: RobotId;
+  readonly zoneId: string;
+  readonly nonce: string;
+  readonly requestId: string;
+  readonly expiresAtMs: number;
 };
 
-// ── Gate decision receipt (re-exported for convenience) ──────────────────────
+// ── 0G Runtime types ─────────────────────────────────────────────────────────
 
-// GateDecisionReceipt is declared in schemas.ts; kept here as a note that the
-// single-use token is bound to (robot, zone, nonce, 0G request id), TTL <= 60s.
-// ref: ROADMAP.md §4.3.7, §4.11
+/**
+ * Failure kinds classified by the zero-g-adapter.
+ * ref: zero-g-adapter/src/failures.ts
+ */
+export type FailureKind =
+  | "TIMEOUT"
+  | "NETWORK"
+  | "HTTP_RETRYABLE"
+  | "HTTP_FATAL"
+  | "BLOCKED"
+  | "CONCURRENCY"
+  | "INVALID_STATE"
+  | "BODY_TOO_LARGE"
+  | "NOT_JSON"
+  | "BAD_ENVELOPE"
+  | "NO_REQUEST_ID"
+  | "TEE_UNVERIFIED"
+  | "TRUNCATED"
+  | "EMPTY_CONTENT"
+  | "BAD_PROPOSAL_JSON"
+  | "BAD_PROPOSAL_SCHEMA"
+  | "ACTION_NOT_IN_SET"
+  | "ACTION_UNGROUNDED";
+
+/**
+ * Result of a halt, returned when the robot cannot continue.
+ * ref: ROADMAP.md §4.3.4
+ */
+export type Halt = {
+  readonly halted: true;
+  readonly reason: HaltReason;
+  readonly detail: string;
+};
+
+// ── 0G Gateway config ─────────────────────────────────────────────────────────
+
+/**
+ * Configuration for the 0G Gateway connection.
+ * At least one of nodeUrl or privateKey must be provided.
+ * ref: zero-g-adapter/src/runtime.ts
+ */
+export type GatewayConfig = {
+  readonly nodeUrl?: string;
+  readonly privateKey?: string;
+  readonly mode?: "live" | "mock" | "blocked";
+};

@@ -9,6 +9,7 @@
 import Fastify from "fastify";
 import fastifyCors from "@fastify/cors";
 import { createLogger } from "@dabbawala/observability";
+import "dotenv/config";
 import { initDatabase } from "@dabbawala/database";
 import { loadConfig } from "@dabbawala/config";
 import { createZeroGRuntime } from "@dabbawala/zero-g-adapter";

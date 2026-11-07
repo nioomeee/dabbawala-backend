@@ -153,7 +153,7 @@ export class FetchRouterTransport implements RouterTransport {
       return { ok: true, response: raw };
     } catch (e: unknown) {
       if (flags.timedOut) {
-        return { ok: false, failure: { kind: "TIMEOUT", detail: "ATTEMPT_DEADLINE_EXCEEDED", latencyMs: elapsed() } };
+        return { ok: false, failure: { kind: "NETWORK", detail: "ATTEMPT_DEADLINE_EXCEEDED", latencyMs: elapsed() } };
       }
       // Deliberately do not forward e.message: it may reflect request details.
       const name = e instanceof Error ? e.name : "UnknownError";

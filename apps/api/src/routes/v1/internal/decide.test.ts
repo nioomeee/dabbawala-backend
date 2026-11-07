@@ -131,7 +131,7 @@ describe("POST /v1/internal/decide", () => {
 
   it("200 halted passthrough carries reason and policy stamp", async () => {
     scripted.value = {
-      result: { halted: true, reason: "ZG_TIMEOUT", detail: "ATTEMPT_DEADLINE_EXCEEDED" },
+      result: { halted: true, reason: "ACTION_NOT_ALLOWED", detail: "ATTEMPT_DEADLINE_EXCEEDED" },
       mode: "MOCK",
     };
     const app = await buildTestApp();
@@ -144,7 +144,7 @@ describe("POST /v1/internal/decide", () => {
     const body = res.json() as Record<string, unknown>;
     expect(body).toMatchObject({
       halted: true,
-      reason: "ZG_TIMEOUT",
+      reason: "ACTION_NOT_ALLOWED",
       detail: "ATTEMPT_DEADLINE_EXCEEDED",
       source: "sim",
     });

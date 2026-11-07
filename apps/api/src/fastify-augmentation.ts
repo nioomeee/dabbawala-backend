@@ -19,4 +19,11 @@ declare module "fastify" {
     readonly zeroG: ZeroGRuntime | null;
     readonly ens: EnsPolicyReader | null;
   }
+  // OpenAPI route metadata (tags/summary) is consumed by schema serializers;
+  // Fastify's base FastifySchema omits both, so routes declaring them fail to
+  // typecheck. Type-only augmentation: no runtime behaviour, no new deps.
+  interface FastifySchema {
+    readonly tags?: readonly string[];
+    readonly summary?: string;
+  }
 }

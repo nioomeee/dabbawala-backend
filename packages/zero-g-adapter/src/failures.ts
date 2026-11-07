@@ -17,14 +17,12 @@ import type { FailureKind } from "./types.js";
 
 export function haltReasonFor(kind: FailureKind): HaltReason {
   switch (kind) {
-    case "TIMEOUT":
-      return "ZG_TIMEOUT";
     case "BLOCKED":
     case "CONCURRENCY":
     case "NETWORK":
     case "HTTP_RETRYABLE":
     case "HTTP_FATAL":
-      return "ZG_TRANSPORT";
+      return "ACTION_NOT_ALLOWED";
     case "INVALID_STATE":
     case "BODY_TOO_LARGE":
     case "NOT_JSON":
@@ -35,7 +33,6 @@ export function haltReasonFor(kind: FailureKind): HaltReason {
     case "EMPTY_CONTENT":
     case "BAD_PROPOSAL_JSON":
     case "BAD_PROPOSAL_SCHEMA":
-      return "ZG_MALFORMED";
     case "ACTION_NOT_IN_SET":
     case "ACTION_UNGROUNDED":
       return "ACTION_NOT_ALLOWED";
@@ -45,7 +42,6 @@ export function haltReasonFor(kind: FailureKind): HaltReason {
 /** Failure kinds for which one retry is permitted. */
 export function isRetryable(kind: FailureKind): boolean {
   switch (kind) {
-    case "TIMEOUT":
     case "NETWORK":
     case "HTTP_RETRYABLE":
     case "TEE_UNVERIFIED": // a different provider may serve the retry
@@ -92,8 +88,6 @@ export function operationalCode(kind: FailureKind, detail: string): string {
       return "OG_LOCAL_CONCURRENCY_LIMIT";
     case "INVALID_STATE":
       return "OG_STATE_INVALID";
-    case "TIMEOUT":
-      return "OG_TIMEOUT";
     case "NETWORK":
       return "OG_NETWORK";
     case "BODY_TOO_LARGE":

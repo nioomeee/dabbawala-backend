@@ -22,9 +22,26 @@ import { randomUUID } from "node:crypto";
 import { StateSummarySchema } from "@dabbawala/shared";
 import { validateAction } from "@dabbawala/policy-engine";
 import { readPolicySnapshotStub } from "../../../adapters/ens-stub.js";
+import { getDatabase, episodeLogs } from "@dabbawala/database";
 import { createLogger } from "@dabbawala/observability";
 
 const log = createLogger("api:mission-decide");
+
+// In-memory episode log per app instance (simulation only; persisted episode
+// upload to 0G Storage and RelayLedger anchoring is handled separately in B-3/B-4).
+const episodeEntries: Array<{
+  seq: number;
+  tsMs: number;
+  robotId: string;
+  type: "decision" | "policy_read" | "payment" | "gate" | "halt" | "resume" | "anchor";
+  policyBlock?: number;
+  policyHash?: string;
+  requestId?: string;
+  txId?: string;
+  action?: { type: string; routeId?: string };
+  reason?: string;
+}> = [];
+let episodeSeq = 0;
 
 export const missionDecideRoutes: FastifyPluginAsync = async (app) => {
   app.post(
@@ -182,6 +199,40 @@ export const missionDecideRoutes: FastifyPluginAsync = async (app) => {
           { robotId: state.robotId, requestId: result.requestId, actionType: result.action.type },
           "mission decide — approved",
         );
+
+        // 5. Record episode log entry for this decision
+        episodeSeq++;
+        const episodeEntry = {
+          seq: episodeSeq,
+          tsMs: Date.now(),
+          robotId: state.robotId,
+          type: "decision" as const,
+          policyBlock: Number(policy.block),
+          policyHash: policy.valuesHash,
+          requestId: result.requestId,
+          action: result.action,
+        };
+        episodeEntries.push(episodeEntry);
+
+        // 5b. Persist episode log entry to database
+        try {
+          await getDatabase().insert(episodeLogs).values({
+            episodeId: `${state.robotId}-${Date.now()}`,
+            seq: episodeSeq,
+            tsMs: episodeEntry.tsMs,
+            robotId: state.robotId,
+            type: "decision",
+            policyBlock:
+              episodeEntry.policyBlock !== undefined
+                ? BigInt(episodeEntry.policyBlock)
+                : undefined,
+            policyHash: episodeEntry.policyHash,
+            requestId: episodeEntry.requestId,
+            action: episodeEntry.action,
+          });
+        } catch (dbError) {
+          log.error({ dbError: dbError instanceof Error ? dbError.message : String(dbError) }, "mission decide — failed to persist episode log");
+        }
 
         return reply.send({
           source,

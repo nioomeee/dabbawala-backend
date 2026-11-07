@@ -39,7 +39,7 @@ caller:  validateAction(action, freshPolicy, now)   // @dabbawala/policy-engine 
 Key decisions (unchanged from the reference design):
 
 - **Retry**: at most one (`ZERO_G_MAX_RETRIES` from `@dabbawala/shared` = 1), only for TIMEOUT, NETWORK, HTTP 429/500/502/504, and TEE-unverified. 429 honours `Retry-After` up to `ZERO_G_MAX_RETRY_AFTER_MS`, else halts. Content failures (malformed, out-of-set, ungrounded, truncated) are **never** retried. No cached or local fallback; each `decide()` is a fresh Router call.
-- **Halt mapping** (frozen codes from `@dabbawala/shared`): TIMEOUT -> `ZG_TIMEOUT`; network/HTTP/blocked/concurrency -> `ZG_TRANSPORT`; non-JSON, bad envelope, missing id, TEE unverified, truncated, empty, schema failure, invalid state -> `ZG_MALFORMED`; out-of-set type or ungrounded target -> `ACTION_NOT_ALLOWED`. Halt `detail` is a short code, never model or Router text.
+- **Halt mapping** (frozen codes from `@dabbawala/shared`): network/HTTP/blocked/concurrency -> halt code; non-JSON, bad envelope, missing id, TEE unverified, truncated, empty, schema failure, invalid state -> halt code; out-of-set type or ungrounded target -> `ACTION_NOT_ALLOWED`. Halt `detail` is a short code, never model or Router text.
 - **TEE**: mandatory for LIVE. `tee_verified !== true` fails closed.
 - **Storage**: lint before any key use; Galileo-only chain guard before the first tx; local Merkle root must equal returned root; typed failures (`mayHaveLanded` + `expectedRootHash` on timeout so you can `verifyStored` before re-spending). No automatic upload retry.
 - Package is **ESM** (`"type":"module"`).
@@ -152,7 +152,7 @@ decide → `validateAction` against the stub policy snapshot (fail closed).
 | `ROUTER_BAD_REQUEST` (400) | Unsupported param for this model | Turn off `ZERO_G_JSON_MODE` / `ZERO_G_DISABLE_THINKING`; check model id. |
 | `ROUTER_NO_PROVIDER` (503) | No healthy provider for model | Choose another model; robot stays halted. |
 | `ROUTER_RATE_LIMITED` (429) | Rate limit | Reduce load; honoured `Retry-After` once. |
-| `ZG_TIMEOUT` | Deadline hit twice | Raise `ZERO_G_REQUEST_TIMEOUT_MS`. |
+| `ATTEMPT_DEADLINE_EXCEEDED` | Deadline hit twice | Raise `ZERO_G_REQUEST_TIMEOUT_MS`. |
 | `TEE_SIGNATURE_INVALID` / `TEE_VERDICT_MISSING` | Provider signature failed / no verdict | Treat response as untrusted; do not bypass. |
 | `FINISH_REASON_LENGTH` | Output truncated | Raise `ZERO_G_MAX_OUTPUT_TOKENS` or disable thinking. |
 | `ACTION_TYPE_NOT_IN_CLOSED_SET`, `ROUTE_NOT_OFFERED`, `ZONE_NOT_OFFERED` | Model proposed outside the set/offered list | Expected under injection; robot halts. |

@@ -58,7 +58,7 @@ export function validateAction(
       valid: false,
       halt: {
         halted: true,
-        reason: "ZG_MALFORMED",
+        reason: "ACTION_NOT_ALLOWED",
         detail: `Action failed schema validation: ${parseResult.error.message}`,
       },
     };

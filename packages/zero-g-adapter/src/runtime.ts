@@ -1,9 +1,4 @@
-/**
- * Runtime assembly + startup validation + readiness.
- *
- *   const rt = createZeroGRuntime(process.env, { logger });
- *   if (!rt.ok) { // malformed config: refuse to start }
- *   rt.value.brain         // IFleetBrain
+/* *   rt.value.brain         // IFleetBrain
  *   rt.value.evidence      // EvidenceStore
  *   rt.value.provenance    // InMemoryProvenanceLog (also the brain's sink)
  *   rt.value.readiness()   // LIVE | MOCK | BLOCKED per capability
@@ -13,7 +8,7 @@
  *            actually completed a TEE-verified call (compute) or upload (storage).
  *   MOCK     explicit ZERO_G_MODE=mock (never in production).
  *   BLOCKED  required env vars missing; no network calls are made; decide()
- *            returns Halt{ZG_TRANSPORT}; put() returns BLOCKED.
+ *            returns Halt; put() returns BLOCKED.
  * readiness() performs NO network I/O: a LIVE status means "configured", and
  * `proven` / `lastSuccessAtMs` say whether it has actually worked.
  */
