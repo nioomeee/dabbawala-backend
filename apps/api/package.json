@@ -1,8 +1,12 @@
+
 {
   "name": "@dabbawala/api",
   "version": "0.1.0",
   "private": true,
   "description": "Dabbawala Protocol HTTP API — Fastify server with health, robot status, and approval endpoints.",
+  "engines": {
+    "node": "24.x"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
